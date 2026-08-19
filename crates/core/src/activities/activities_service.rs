@@ -1,6 +1,7 @@
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use log::debug;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
@@ -1386,6 +1387,89 @@ impl ActivityService {
             entry.push(message.to_string());
         }
         activity.is_valid = false;
+    }
+
+    /// A trade row that carries quantity, unit price *and* a broker total is the one
+    /// shape where an import file can contradict itself without the contradiction being
+    /// visible anywhere: the holdings calculator books a plain BUY/SELL from
+    /// `quantity * unit price` and never reads the total, so a total that disagrees
+    /// means the imported cost basis is silently not the amount that left the account.
+    /// The usual cause is a price quoted in the instrument's listing currency while the
+    /// total and the row currency are the account's, which one activity currency cannot
+    /// express.
+    ///
+    /// Warn rather than reject. A broker that states the trade in one currency and
+    /// settlement in another produces the same disagreement from a row that imports
+    /// correctly, so which figure is authoritative is the user's call.
+    ///
+    /// Bonds and options are exempt: the calculator already prefers the broker total
+    /// for bonds, which quote as a percentage of par, and scales the price by the
+    /// contract multiplier for options, so a disagreement there is expected.
+    fn check_trade_total_consistency(
+        activity: &mut ActivityImport,
+        instrument_type: Option<&InstrumentType>,
+    ) {
+        if !PRICE_BEARING_ACTIVITY_TYPES.contains(&activity.activity_type.as_str()) {
+            return;
+        }
+        if matches!(
+            instrument_type,
+            Some(InstrumentType::Bond | InstrumentType::Option)
+        ) {
+            return;
+        }
+
+        let magnitude = |value: Option<Decimal>| value.map(|v| v.abs()).filter(|v| !v.is_zero());
+        let (Some(quantity), Some(unit_price), Some(amount)) = (
+            magnitude(activity.quantity),
+            magnitude(activity.unit_price),
+            magnitude(activity.amount),
+        ) else {
+            return;
+        };
+
+        // A broker states the total either gross or net of commission, so both ends of
+        // that band reconcile. The ratio covers a price printed to fewer decimals than
+        // it filled at and stays well below any currency or unit mismatch.
+        let charges =
+            activity.fee.unwrap_or_default().abs() + activity.tax.unwrap_or_default().abs();
+        let gross = quantity * unit_price;
+        let reconciles = |expected: Decimal| {
+            let rounding = (expected * dec!(0.01)).abs().max(dec!(0.01));
+            (amount - expected).abs() <= charges + rounding
+        };
+
+        if reconciles(gross) {
+            return;
+        }
+
+        let currency = activity.currency.trim();
+        let stated_fx_rate = magnitude(activity.fx_rate)
+            .filter(|rate| reconciles(gross * rate) || reconciles(gross / rate));
+
+        let message = match stated_fx_rate {
+            Some(rate) => format!(
+                "Quantity times unit price ({}) differs from the stated total ({} {}) by exactly the stated FX rate {}, so the price is quoted in another currency. Cost basis is booked from quantity times unit price, so it will be {} {} rather than {} {}. Restate the unit price in {}.",
+                gross.round_dp(2),
+                amount.round_dp(2),
+                currency,
+                rate.normalize(),
+                gross.round_dp(2),
+                currency,
+                amount.round_dp(2),
+                currency,
+                currency,
+            ),
+            None => format!(
+                "Quantity times unit price ({} {}) does not match the stated total ({} {}). Cost basis is booked from quantity times unit price, so the total is ignored. Check the quantity and unit price, and whether the price is quoted in another currency.",
+                gross.round_dp(2),
+                currency,
+                amount.round_dp(2),
+                currency,
+            ),
+        };
+
+        Self::add_activity_warning(activity, "unitPrice", &message);
     }
 
     fn hydrate_import_activity_from_asset_id(&self, activity: &mut ActivityImport) {
@@ -3590,6 +3674,7 @@ impl ActivityService {
 
             activity.is_valid = true;
             self.validate_currency(&mut activity, &account_currency);
+            Self::check_trade_total_consistency(&mut activity, effective_instrument_type.as_ref());
             activities_with_status.push(activity);
         }
 

@@ -6159,6 +6159,213 @@ mod tests {
         assert_eq!(checked.quote_ccy.as_deref(), Some("GBp"));
     }
 
+    /// Row shared by the trade-total reconciliation tests: a BUY of an existing,
+    /// venue-qualified asset in a CAD account, so the only thing under test is
+    /// whether quantity, unit price and the stated total agree.
+    fn trade_total_import(
+        symbol: &str,
+        instrument_type: Option<&str>,
+        quantity: Decimal,
+        unit_price: Decimal,
+        amount: Decimal,
+        fee: Option<Decimal>,
+        fx_rate: Option<Decimal>,
+    ) -> ActivityImport {
+        ActivityImport {
+            id: None,
+            date: "2026-06-30".to_string(),
+            symbol: symbol.to_string(),
+            activity_type: "BUY".to_string(),
+            quantity: Some(quantity),
+            unit_price: Some(unit_price),
+            currency: "CAD".to_string(),
+            fee,
+            tax: None,
+            amount: Some(amount),
+            comment: None,
+            account_id: Some("acc-1".to_string()),
+            account_name: None,
+            symbol_name: None,
+            exchange_mic: Some("ARCX".to_string()),
+            quote_ccy: None,
+            instrument_type: instrument_type.map(|t| t.to_string()),
+            quote_mode: None,
+            provider_id: None,
+            provider_symbol: None,
+            errors: None,
+            warnings: None,
+            duplicate_of_id: None,
+            duplicate_of_line_number: None,
+            is_draft: false,
+            is_valid: true,
+            line_number: Some(1),
+            fx_rate,
+            subtype: None,
+            asset_id: None,
+            isin: None,
+            force_import: false,
+            is_external: None,
+        }
+    }
+
+    async fn check_trade_total_import(import: ActivityImport) -> ActivityImport {
+        let account_service = Arc::new(MockAccountService::new());
+        let asset_service = Arc::new(MockAssetService::new());
+        let fx_service = Arc::new(MockFxService::new());
+        let activity_repository = Arc::new(MockActivityRepository::new());
+
+        account_service.add_account(create_test_account("acc-1", "CAD"));
+        asset_service.add_asset(create_test_asset_with_instrument(
+            "kweb-uuid",
+            "KWEB",
+            Some("ARCX"),
+            Some(InstrumentType::Equity),
+            "USD",
+        ));
+        asset_service.add_asset(create_test_asset_with_instrument(
+            "bond-uuid",
+            "T4375",
+            Some("ARCX"),
+            Some(InstrumentType::Bond),
+            "USD",
+        ));
+
+        let activity_service = ActivityService::new(
+            activity_repository,
+            account_service,
+            asset_service,
+            fx_service,
+            Arc::new(MockQuoteService),
+        );
+
+        let mut result = activity_service
+            .check_activities_import(vec![import])
+            .await
+            .expect("import check should succeed");
+        assert_eq!(result.len(), 1);
+        result.remove(0)
+    }
+
+    fn unit_price_warning(activity: &ActivityImport) -> Option<String> {
+        activity
+            .warnings
+            .as_ref()
+            .and_then(|warnings| warnings.get("unitPrice"))
+            .and_then(|messages| messages.first())
+            .cloned()
+    }
+
+    /// The price is in the instrument's listing currency and the total is in the
+    /// account's. The row is internally consistent under either reading, and the
+    /// calculator books quantity * unit price, so the cost basis comes out understated
+    /// by the FX factor with nothing saying so.
+    #[tokio::test]
+    async fn test_check_import_flags_trade_total_that_only_reconciles_through_the_fx_rate() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(10),
+            dec!(50),
+            dec!(675),
+            Some(dec!(0)),
+            Some(dec!(1.35)),
+        ))
+        .await;
+
+        let warning = unit_price_warning(&checked).expect("mismatch should be flagged");
+        assert!(
+            warning.contains("1.35"),
+            "warning should name the stated FX rate: {warning}"
+        );
+        assert!(
+            warning.contains("500"),
+            "warning should name the booked cost basis: {warning}"
+        );
+        assert!(
+            warning.contains("675"),
+            "warning should name the stated total: {warning}"
+        );
+    }
+
+    /// Same disagreement with no FX rate column mapped. It is still a wrong cost basis,
+    /// so it is still flagged, just without an explanation the file did not supply.
+    #[tokio::test]
+    async fn test_check_import_flags_trade_total_mismatch_without_a_stated_fx_rate() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(10),
+            dec!(50),
+            dec!(675),
+            Some(dec!(0)),
+            None,
+        ))
+        .await;
+
+        let warning = unit_price_warning(&checked).expect("mismatch should be flagged");
+        assert!(
+            !warning.contains("FX rate"),
+            "no rate was supplied, so none should be claimed: {warning}"
+        );
+        assert!(
+            warning.contains("675"),
+            "warning should name the stated total: {warning}"
+        );
+    }
+
+    /// A total quoted net of commission is the common shape and is not a defect.
+    #[tokio::test]
+    async fn test_check_import_accepts_a_trade_total_that_includes_the_commission() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(10),
+            dec!(50),
+            dec!(509.95),
+            Some(dec!(9.95)),
+            None,
+        ))
+        .await;
+
+        assert_eq!(unit_price_warning(&checked), None);
+    }
+
+    /// A price printed to fewer decimals than the fill leaves a residue, which is not a
+    /// defect either.
+    #[tokio::test]
+    async fn test_check_import_accepts_a_trade_total_off_by_price_rounding() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(100),
+            dec!(12.35),
+            dec!(1234.56),
+            Some(dec!(0)),
+            None,
+        ))
+        .await;
+
+        assert_eq!(unit_price_warning(&checked), None);
+    }
+
+    /// Bonds quote as a percentage of par, so the calculator already prefers the broker
+    /// total for them and the disagreement is expected rather than wrong.
+    #[tokio::test]
+    async fn test_check_import_skips_the_trade_total_check_for_bonds() {
+        let checked = check_trade_total_import(trade_total_import(
+            "T4375",
+            Some("BOND"),
+            dec!(10000),
+            dec!(98.5),
+            dec!(9850),
+            Some(dec!(0)),
+            None,
+        ))
+        .await;
+
+        assert_eq!(unit_price_warning(&checked), None);
+    }
+
     #[tokio::test]
     async fn test_check_import_uses_existing_asset_currency_when_import_currency_is_missing() {
         let account_service = Arc::new(MockAccountService::new());
