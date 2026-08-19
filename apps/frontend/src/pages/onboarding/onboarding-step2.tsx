@@ -300,52 +300,51 @@ export const OnboardingStep2 = forwardRef<OnboardingStep2Handle, OnboardingStep2
             <p className="text-muted-foreground">{t("onboarding:steps.preferences.subtitle")}</p>
           </div>
           <Card className="border-none bg-transparent shadow-none">
-            <CardContent className="p-0 sm:p-6">
+            <CardContent className="p-0 sm:p-4">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-10">
-                  <div>
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="bg-muted rounded-lg p-2">
-                        <Icons.Globe className="text-muted-foreground h-5 w-5" />
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="grid gap-3 sm:gap-4 md:grid-cols-2"
+                >
+                  <div className="border-border/70 bg-muted/10 min-w-0 rounded-xl border p-4">
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <div className="bg-muted rounded-md p-1.5">
+                        <Icons.Globe className="text-muted-foreground size-4" />
                       </div>
-                      <span className="text-lg font-semibold sm:text-xl">
+                      <span className="text-base font-semibold">
                         {t("onboarding:steps.preferences.languageLabel")}
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5 sm:gap-4">
+                    <div className="flex flex-wrap gap-2">
                       {SUPPORTED_LOCALES.map((locale) => (
                         <button
                           key={locale.code}
                           type="button"
                           data-testid={`language-${locale.code}-button`}
                           onClick={() => handleLanguageSelect(locale.code)}
-                          className={`flex min-h-14 min-w-0 items-center rounded-lg border-2 p-2 text-xs font-semibold transition-all sm:p-3 sm:text-sm ${
+                          className={`inline-flex min-h-10 max-w-full items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                             language === locale.code
-                              ? "border-primary bg-primary/10"
-                              : "border-border bg-muted/20 hover:border-primary/50 hover:bg-accent"
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-accent"
                           }`}
                         >
-                          <div className="flex flex-col items-start gap-1">
-                            <span className="min-w-0 truncate font-semibold sm:whitespace-normal">
-                              {locale.label}
-                            </span>
-                          </div>
+                          {locale.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div>
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="bg-muted rounded-lg p-2">
-                        <Icons.Calendar className="text-muted-foreground h-5 w-5" />
+                  <div className="border-border/70 bg-muted/10 min-w-0 rounded-xl border p-4">
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <div className="bg-muted rounded-md p-1.5">
+                        <Icons.Calendar className="text-muted-foreground size-4" />
                       </div>
-                      <span className="text-lg font-semibold sm:text-xl">
+                      <span className="text-base font-semibold">
                         {t("onboarding:steps.preferences.formattingRegionLabel")}
                       </span>
                     </div>
                     <div
-                      className="grid grid-cols-5 gap-1.5 sm:gap-4"
+                      className="flex flex-wrap gap-2"
                       data-testid="onboarding-formatting-locale"
                     >
                       {formattingRegionOptions.map((locale) => (
@@ -353,10 +352,10 @@ export const OnboardingStep2 = forwardRef<OnboardingStep2Handle, OnboardingStep2
                           key={locale}
                           type="button"
                           onClick={() => handleFormattingRegionSelect(locale)}
-                          className={`flex min-h-14 min-w-0 items-center overflow-hidden rounded-lg border-2 p-2 text-left text-xs font-semibold leading-tight transition-all sm:p-3 sm:text-sm ${
+                          className={`inline-flex min-h-10 max-w-full items-center rounded-md border px-3 py-2 text-left text-sm font-medium leading-tight transition-colors ${
                             formattingRegion === locale
-                              ? "border-primary bg-primary/10"
-                              : "border-border bg-muted/20 hover:border-primary/50 hover:bg-accent"
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-accent"
                           }`}
                         >
                           {getFormattingRegionLabel(locale)}
@@ -365,13 +364,13 @@ export const OnboardingStep2 = forwardRef<OnboardingStep2Handle, OnboardingStep2
                       <button
                         type="button"
                         onClick={() => setShowFormattingRegionSearch(true)}
-                        className="border-border bg-muted/20 hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-14 min-w-0 cursor-pointer items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-lg border-2 p-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:gap-2 sm:p-3 sm:text-sm"
+                        className="border-border bg-background hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                       >
-                        <Icons.Search className="size-3.5 shrink-0 sm:size-5" />
+                        <Icons.Search className="size-4 shrink-0" />
                         {t("onboarding:steps.preferences.other")}
                       </button>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-xs tabular-nums sm:text-sm">
+                    <p className="text-muted-foreground mt-2 break-words text-xs tabular-nums leading-relaxed">
                       {formattingPreview}
                     </p>
                   </div>
@@ -380,40 +379,38 @@ export const OnboardingStep2 = forwardRef<OnboardingStep2Handle, OnboardingStep2
                     control={form.control}
                     name="baseCurrency"
                     render={({ field }) => (
-                      <FormItem>
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="bg-muted rounded-lg p-2">
-                            <Icons.DollarSign className="text-muted-foreground h-5 w-5" />
+                      <FormItem className="border-border/70 bg-muted/10 min-w-0 rounded-xl border p-4">
+                        <div className="mb-3 flex items-center gap-2.5">
+                          <div className="bg-muted rounded-md p-1.5">
+                            <Icons.DollarSign className="text-muted-foreground size-4" />
                           </div>
-                          <FormLabel className="text-lg font-semibold sm:text-xl">
+                          <FormLabel className="text-base font-semibold">
                             {t("onboarding:steps.preferences.currencyLabel")}
                           </FormLabel>
                         </div>
                         <FormControl>
-                          <div className="grid grid-cols-5 gap-1.5 sm:gap-4">
+                          <div className="flex flex-wrap gap-2">
                             {currencyOptions.map((curr) => (
                               <button
                                 key={curr}
                                 type="button"
                                 data-testid={`currency-${curr.toLowerCase()}-button`}
                                 onClick={() => field.onChange(curr)}
-                                className={`flex min-h-14 min-w-0 items-center rounded-lg border-2 p-2 text-xs font-semibold transition-all sm:p-3 sm:text-sm ${
+                                className={`inline-flex min-h-10 items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
                                   field.value === curr
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border bg-muted/20 hover:border-primary/50 hover:bg-accent"
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border bg-background hover:border-primary/50 hover:bg-accent"
                                 }`}
                               >
-                                <div className="flex flex-col items-start gap-1">
-                                  <span className="font-semibold">{curr}</span>
-                                </div>
+                                {curr}
                               </button>
                             ))}
                             <button
                               type="button"
                               onClick={() => setShowCurrencySearch(true)}
-                              className="border-border bg-muted/20 hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-14 min-w-0 cursor-pointer items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-lg border-2 p-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 sm:gap-2 sm:p-3 sm:text-sm [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0 sm:[&_svg]:size-5"
+                              className="border-border bg-background hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
-                              <Icons.Search className="size-5" />
+                              <Icons.Search className="size-4 shrink-0" />
                               {t("onboarding:steps.preferences.other")}
                             </button>
                           </div>
@@ -427,42 +424,38 @@ export const OnboardingStep2 = forwardRef<OnboardingStep2Handle, OnboardingStep2
                     control={form.control}
                     name="timezone"
                     render={({ field }) => (
-                      <FormItem>
-                        <div className="mb-3 flex items-center gap-3">
-                          <div className="bg-muted rounded-lg p-2">
-                            <Icons.Clock className="text-muted-foreground h-5 w-5" />
+                      <FormItem className="border-border/70 bg-muted/10 min-w-0 rounded-xl border p-4">
+                        <div className="mb-3 flex items-center gap-2.5">
+                          <div className="bg-muted rounded-md p-1.5">
+                            <Icons.Clock className="text-muted-foreground size-4" />
                           </div>
-                          <FormLabel className="text-lg font-semibold sm:text-xl">
+                          <FormLabel className="text-base font-semibold">
                             {t("onboarding:steps.preferences.timezoneLabel")}
                           </FormLabel>
                         </div>
                         <FormControl>
-                          <div className="grid grid-cols-5 gap-1.5 sm:gap-4">
+                          <div className="flex flex-wrap gap-2">
                             {timezoneOptions.map((tz) => (
                               <button
                                 key={tz}
                                 type="button"
                                 data-testid={`timezone-${tz.toLowerCase().replace(/\//g, "-")}-button`}
                                 onClick={() => field.onChange(tz)}
-                                className={`flex min-h-14 min-w-0 items-center rounded-lg border-2 p-2 text-xs font-semibold transition-all sm:p-3 sm:text-sm ${
+                                className={`inline-flex min-h-10 max-w-full items-center rounded-md border px-3 py-2 text-sm font-medium leading-tight transition-colors ${
                                   field.value === tz
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border bg-muted/20 hover:border-primary/50 hover:bg-accent"
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border bg-background hover:border-primary/50 hover:bg-accent"
                                 }`}
                               >
-                                <div className="flex min-w-0 flex-col items-start gap-1">
-                                  <span className="whitespace-normal text-left font-semibold leading-tight">
-                                    {formatTimezoneLabel(tz)}
-                                  </span>
-                                </div>
+                                {formatTimezoneLabel(tz)}
                               </button>
                             ))}
                             <button
                               type="button"
                               onClick={() => setShowTimezoneSearch(true)}
-                              className="border-border bg-muted/20 hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-14 min-w-0 cursor-pointer items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-lg border-2 p-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 sm:gap-2 sm:p-3 sm:text-sm [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0 sm:[&_svg]:size-5"
+                              className="border-border bg-background hover:border-primary/50 hover:bg-accent ring-offset-background focus-visible:ring-ring inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
-                              <Icons.Search className="size-5" />
+                              <Icons.Search className="size-4 shrink-0" />
                               {t("onboarding:steps.preferences.other")}
                             </button>
                           </div>

@@ -1,7 +1,9 @@
 import { HoldingType } from "@/lib/constants";
 import type { Holding } from "@/lib/types";
 
-export const CASH_HOLDING_TYPE_KEY = "CASH";
+// Sentinel for the synthetic cash pseudo-type. Must not collide with a real
+// instrument_type taxonomy key ("CASH" is the key of the "Cash Balance" category).
+export const CASH_HOLDING_TYPE_KEY = "__CASH__";
 
 export interface HoldingTypeFilterOption {
   value: string;
@@ -29,7 +31,9 @@ export function getHoldingTypeFilterOption(
 }
 
 export function getHoldingTypeTranslationKey(value: string): string {
-  return `holdings:instrument_types.${value}`;
+  // Cash is not a taxonomy category, so it keeps its own label rather than borrowing a
+  // slot in the instrument type namespace that a real category could also claim.
+  return value === CASH_HOLDING_TYPE_KEY ? "holdings:cash" : `holdings:instrument_types.${value}`;
 }
 
 export function filterHoldingsByType(holdings: Holding[], selectedTypes: string[]): Holding[] {

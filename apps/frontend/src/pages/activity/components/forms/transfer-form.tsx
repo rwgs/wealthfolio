@@ -718,7 +718,7 @@ export function TransferForm({
           {/* Account Selection - conditional based on external flag */}
           {isExternal ? (
             <AccountSelect
-              key={`external-${transferMode}-${direction}-${accountId || "none"}`}
+              key={`external-${transferMode}-${direction}`}
               name="accountId"
               accounts={externalAccountOptions}
               currencyName="currency"
@@ -742,7 +742,7 @@ export function TransferForm({
 
               {/* To Account Selection */}
               <AccountSelect
-                key={`to-${transferMode}-${fromAccountId || "none"}-${toAccountId || "none"}`}
+                key={`to-${transferMode}-${fromAccountId || "none"}`}
                 name="toAccountId"
                 accounts={toAccountOptions}
                 label={t("activity:form.label_to_account")}
