@@ -8,7 +8,6 @@ import {
   getEffectiveHoldingsVisibility,
   hasNonDefaultHoldingsVisibility,
   isClosedPosition,
-  mergeHoldingsVisibilitySelection,
 } from "./holdings-visibility";
 
 function holding(
@@ -37,51 +36,36 @@ const cashBalance = holding("cash", HoldingType.CASH, 100);
 const allHoldings = [openPosition, closedPosition, cashBalance];
 
 describe("holdings visibility filters", () => {
-  it("shows open positions by default", () => {
+  it("shows open positions and cash by default", () => {
     expect(
       filterHoldingsByVisibility(allHoldings, DEFAULT_HOLDINGS_VISIBILITY).map(({ id }) => id),
-    ).toEqual(["open"]);
+    ).toEqual(["open", "cash"]);
   });
 
-  it("can focus on open, closed, or cash holdings independently", () => {
-    expect(filterHoldingsByVisibility(allHoldings, ["open"]).map(({ id }) => id)).toEqual(["open"]);
+  it("filters holdings by lifecycle status", () => {
+    expect(filterHoldingsByVisibility(allHoldings, ["open"]).map(({ id }) => id)).toEqual([
+      "open",
+      "cash",
+    ]);
     expect(filterHoldingsByVisibility(allHoldings, ["closed"]).map(({ id }) => id)).toEqual([
       "closed",
     ]);
-    expect(filterHoldingsByVisibility(allHoldings, ["cash"]).map(({ id }) => id)).toEqual(["cash"]);
-    expect(
-      filterHoldingsByVisibility(allHoldings, ["open", "closed", "cash"]).map(({ id }) => id),
-    ).toEqual(["open", "closed", "cash"]);
+    expect(filterHoldingsByVisibility(allHoldings, ["open", "closed"]).map(({ id }) => id)).toEqual(
+      ["open", "closed", "cash"],
+    );
   });
 
   it("only marks non-default visibility selections as active", () => {
     expect(hasNonDefaultHoldingsVisibility(["open"])).toBe(false);
     expect(hasNonDefaultHoldingsVisibility(["closed"])).toBe(true);
-    expect(hasNonDefaultHoldingsVisibility(["open", "cash"])).toBe(true);
+    expect(hasNonDefaultHoldingsVisibility(["open", "closed"])).toBe(true);
   });
 
-  it("removes unsupported closed visibility for snapshot accounts", () => {
-    expect(getEffectiveHoldingsVisibility(["open", "closed", "cash"], false)).toEqual([
-      "open",
-      "cash",
-    ]);
+  it("normalizes visibility to one supported status", () => {
+    expect(getEffectiveHoldingsVisibility(["open", "closed"], false)).toEqual(["open"]);
+    expect(getEffectiveHoldingsVisibility(["open", "closed"], true)).toEqual(["open"]);
     expect(getEffectiveHoldingsVisibility(["closed"], false)).toEqual(["open"]);
     expect(getEffectiveHoldingsVisibility(["closed"], true)).toEqual(["closed"]);
-  });
-
-  it("preserves a hidden closed preference when supported filters change", () => {
-    expect(mergeHoldingsVisibilitySelection(["open", "closed"], ["open", "cash"], false)).toEqual([
-      "open",
-      "cash",
-      "closed",
-    ]);
-  });
-
-  it("allows closed to be removed where the filter is supported", () => {
-    expect(mergeHoldingsVisibilitySelection(["open", "closed"], ["open", "cash"], true)).toEqual([
-      "open",
-      "cash",
-    ]);
   });
 
   it("does not classify a zero cash balance as a closed position", () => {

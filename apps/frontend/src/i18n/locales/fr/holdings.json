@@ -69,6 +69,19 @@
   "book_cost": "Coût comptable",
   "total_value": "Valeur totale",
   "asset_type": "Type d'actif",
+  "instrument_types": {
+    "BOND_CORPORATE": "Obligation d'entreprise",
+    "BOND_GOVERNMENT": "Obligation d'État",
+    "CASH": "Liquidités",
+    "CRYPTO_NATIVE": "Crypto-actif",
+    "ETF": "ETF",
+    "FUND_MUTUAL": "Fonds commun de placement",
+    "FUTURE": "Contrat à terme",
+    "MONEY_MARKET_DEBT": "Instrument du marché monétaire",
+    "OPTION": "Option",
+    "STABLECOIN": "Stablecoin",
+    "STOCK_COMMON": "Action"
+  },
   "currency": "Devise",
   "show_values_in_asset": "Afficher les valeurs dans la devise de l'actif",
   "show_values_in_base": "Afficher les valeurs dans la devise de base",
@@ -128,6 +141,9 @@
   "manual": "Manuel",
   "open": "Ouverte",
   "closed": "Clôturée",
+  "cost_basis": "Coût d’acquisition",
+  "sale_proceeds": "Produit de cession",
+  "realized_return": "Rendement réalisé",
   "qty": "Qté",
   "shares_label": "actions",
   "contracts": "contrats",
@@ -138,7 +154,7 @@
   "total_return": "Rendement total",
   "day_pnl": "P&L du jour",
   "unrealized_pnl": "P&L latent",
-  "realized_pnl": "P&L réalisé",
+  "realized_pnl": "Plus/moins-value réalisée",
   "income": "Revenu",
   "classify": "Classifier",
   "allocation": "Allocation",
@@ -217,5 +233,6 @@
   "assets_need_valuations_other": "{{count}} actifs nécessitent des valorisations à jour",
   "category_breakdown": "Répartition par catégorie",
   "personal_assets": "Actifs personnels",
-  "health_filter_active": "Affichage des positions signalées par le Centre de santé"
+  "health_filter_active": "Affichage des positions signalées par le Centre de santé",
+  "closing_cash_flow": "Flux de trésorerie à la clôture"
 }

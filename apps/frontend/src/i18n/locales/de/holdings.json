@@ -69,6 +69,19 @@
   "book_cost": "Anschaffungskosten",
   "total_value": "Gesamtwert",
   "asset_type": "Anlageart",
+  "instrument_types": {
+    "BOND_CORPORATE": "Unternehmensanleihe",
+    "BOND_GOVERNMENT": "Staatsanleihe",
+    "CASH": "Barmittel",
+    "CRYPTO_NATIVE": "Kryptowährung",
+    "ETF": "ETF",
+    "FUND_MUTUAL": "Investmentfonds",
+    "FUTURE": "Futures",
+    "MONEY_MARKET_DEBT": "Geldmarktinstrument",
+    "OPTION": "Option",
+    "STABLECOIN": "Stablecoin",
+    "STOCK_COMMON": "Aktie"
+  },
   "currency": "Währung",
   "show_values_in_asset": "Werte in Vermögenswährung anzeigen",
   "show_values_in_base": "Werte in Basiswährung anzeigen",
@@ -128,6 +141,9 @@
   "manual": "Manuell",
   "open": "Offen",
   "closed": "Geschlossen",
+  "cost_basis": "Anschaffungskosten",
+  "sale_proceeds": "Veräußerungserlös",
+  "realized_return": "Realisierte Rendite",
   "qty": "Anz.",
   "shares_label": "Stücke",
   "contracts": "Kontrakte",
@@ -138,7 +154,7 @@
   "total_return": "Gesamtrendite",
   "day_pnl": "Tages-G&V",
   "unrealized_pnl": "Nicht realisierte G&V",
-  "realized_pnl": "Realisierte G&V",
+  "realized_pnl": "Realisierter Gewinn/Verlust",
   "income": "Ertrag",
   "classify": "Klassifizieren",
   "allocation": "Allokation",
@@ -217,5 +233,6 @@
   "assets_need_valuations_other": "{{count}} Vermögenswerte benötigen aktualisierte Bewertungen",
   "category_breakdown": "Kategorieaufschlüsselung",
   "personal_assets": "Persönliche Vermögenswerte",
-  "health_filter_active": "Vom Health Center markierte Positionen werden angezeigt"
+  "health_filter_active": "Vom Health Center markierte Positionen werden angezeigt",
+  "closing_cash_flow": "Cashflow bei Positionsschließung"
 }

@@ -36,6 +36,7 @@ interface DataTableProps<TData, TValue> {
   manualPagination?: boolean;
   scrollable?: boolean;
   showColumnToggle?: boolean;
+  toolbarView?: React.ReactNode;
   toolbarFilters?: React.ReactNode;
   toolbarActions?: React.ReactNode;
   pinRowsToTop?: (row: TData) => boolean;
@@ -53,6 +54,7 @@ export function DataTable<TData, TValue>({
   storageKey,
   scrollable = false,
   showColumnToggle = false,
+  toolbarView,
   toolbarFilters,
   toolbarActions,
   pinRowsToTop,
@@ -102,6 +104,22 @@ export function DataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  const sortableColumnIdsKey = table
+    .getAllLeafColumns()
+    .filter((column) => column.getCanSort())
+    .map((column) => column.id)
+    .join("\0");
+
+  React.useEffect(() => {
+    const sortableColumnIds = new Set(sortableColumnIdsKey.split("\0").filter(Boolean));
+    const validSorting = sorting.filter(({ id }) => sortableColumnIds.has(id));
+
+    if (validSorting.length === sorting.length) return;
+
+    const fallbackSorting = (defaultSorting ?? []).filter(({ id }) => sortableColumnIds.has(id));
+    setSorting(validSorting.length > 0 ? validSorting : fallbackSorting);
+  }, [defaultSorting, setSorting, sortableColumnIdsKey, sorting]);
+
   const rows = table.getRowModel().rows;
   const displayRows = pinRowsToTop
     ? [...rows.filter((row) => pinRowsToTop(row.original)), ...rows.filter((row) => !pinRowsToTop(row.original))]
@@ -114,6 +132,7 @@ export function DataTable<TData, TValue>({
           table={table}
           searchBy={searchBy}
           filters={filters}
+          viewControl={toolbarView}
           additionalFilters={toolbarFilters}
           showColumnToggle={showColumnToggle}
           actions={toolbarActions}

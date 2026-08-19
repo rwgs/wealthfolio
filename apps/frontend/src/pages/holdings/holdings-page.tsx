@@ -43,9 +43,14 @@ import {
   filterHoldingsByVisibility,
   getEffectiveHoldingsVisibility,
   isClosedPosition,
-  mergeHoldingsVisibilitySelection,
   type HoldingsVisibilityFilter,
 } from "./components/holdings-visibility";
+import {
+  filterHoldingsByType,
+  getHoldingTypeFilterOption,
+  getHoldingTypeFilterValue,
+  getHoldingTypeTranslationKey,
+} from "./components/holdings-type-filter";
 import {
   AlternativeAssetQuickAddModal,
   AssetDetailsSheet,
@@ -91,9 +96,7 @@ export const HoldingsPage = () => {
   );
   const handleVisibilityFiltersChange = useCallback(
     (nextFilters: HoldingsVisibilityFilter[]) => {
-      setVisibilityFilters((currentFilters) =>
-        mergeHoldingsVisibilitySelection(currentFilters, nextFilters, showClosedPositions),
-      );
+      setVisibilityFilters(getEffectiveHoldingsVisibility(nextFilters, showClosedPositions));
     },
     [setVisibilityFilters, showClosedPositions],
   );
@@ -372,34 +375,33 @@ export const HoldingsPage = () => {
     const typeSet = new Set<string>();
     const typeOptions: { value: string; label: string }[] = [];
     for (const h of scopedHoldings) {
-      const name = h.instrument?.classifications?.assetType?.name;
-      if (name && !typeSet.has(name)) {
-        typeSet.add(name);
-        typeOptions.push({ value: name, label: name });
+      const option = getHoldingTypeFilterOption(h, t("holdings:cash"));
+      if (option && !typeSet.has(option.value)) {
+        typeSet.add(option.value);
+        typeOptions.push({
+          value: option.value,
+          label: t(getHoldingTypeTranslationKey(option.value), {
+            defaultValue: option.fallbackLabel,
+          }),
+        });
       }
     }
 
     let filtered = filterHoldingsByVisibility(scopedHoldings, effectiveVisibilityFilters);
-
-    if (selectedTypes.length > 0) {
-      filtered = filtered.filter((holding) => {
-        const assetType = holding.instrument?.classifications?.assetType?.name;
-        return assetType && selectedTypes.includes(assetType);
-      });
-    }
+    filtered = filterHoldingsByType(filtered, selectedTypes);
 
     // Health-center deep-link filters.
     if (healthFilter === "negative") {
       filtered = filtered.filter((holding) => holding.quantity < 0);
     } else if (healthFilter === "unclassified") {
-      filtered = filtered.filter((holding) => !holding.instrument?.classifications?.assetType);
+      filtered = filtered.filter((holding) => !getHoldingTypeFilterValue(holding));
     }
 
     return {
       filteredHoldings: filtered,
       availableTypeOptions: typeOptions,
     };
-  }, [holdings, effectiveVisibilityFilters, selectedTypes, investmentsFilter, healthFilter]);
+  }, [holdings, effectiveVisibilityFilters, selectedTypes, investmentsFilter, healthFilter, t]);
 
   // Combined loading state
   const isDataLoading = isLoading || isAccountsLoading || isAlternativeHoldingsLoading;

@@ -23,9 +23,12 @@ import {
   HOLDINGS_VISIBILITY_STORAGE_KEY,
   filterHoldingsByVisibility,
   getEffectiveHoldingsVisibility,
-  mergeHoldingsVisibilitySelection,
   type HoldingsVisibilityFilter,
 } from "@/pages/holdings/components/holdings-visibility";
+import {
+  getHoldingTypeFilterOption,
+  getHoldingTypeTranslationKey,
+} from "@/pages/holdings/components/holdings-type-filter";
 
 interface AccountHoldingsProps {
   accountId: string;
@@ -68,9 +71,7 @@ const AccountHoldings = ({
   );
   const handleVisibilityFiltersChange = useCallback(
     (nextFilters: HoldingsVisibilityFilter[]) => {
-      setVisibilityFilters((currentFilters) =>
-        mergeHoldingsVisibilitySelection(currentFilters, nextFilters, showClosedPositions),
-      );
+      setVisibilityFilters(getEffectiveHoldingsVisibility(nextFilters, showClosedPositions));
     },
     [setVisibilityFilters, showClosedPositions],
   );
@@ -106,14 +107,19 @@ const AccountHoldings = ({
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [];
     for (const h of holdings ?? []) {
-      const name = h.instrument?.classifications?.assetType?.name;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        options.push({ value: name, label: name });
+      const option = getHoldingTypeFilterOption(h, t("holdings:cash"));
+      if (option && !seen.has(option.value)) {
+        seen.add(option.value);
+        options.push({
+          value: option.value,
+          label: t(getHoldingTypeTranslationKey(option.value), {
+            defaultValue: option.fallbackLabel,
+          }),
+        });
       }
     }
     return options;
-  }, [holdings]);
+  }, [holdings, t]);
 
   // Show loading state while data is being fetched
   if (isLoading) {

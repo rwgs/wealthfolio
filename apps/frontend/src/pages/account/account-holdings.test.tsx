@@ -88,7 +88,7 @@ describe("AccountHoldings", () => {
     expect(screen.queryByTestId("holdings-table")).not.toBeInTheDocument();
   });
 
-  it("marks cash-only results as hidden by the default visibility filter", () => {
+  it("shows cash-only results under the default open status", () => {
     const cashHolding = {
       id: "cash-usd",
       holdingType: "cash",
@@ -104,7 +104,7 @@ describe("AccountHoldings", () => {
 
     expect(screen.getByTestId("holdings-table-mobile")).toHaveAttribute(
       "data-hidden-positions",
-      "true",
+      "false",
     );
   });
 });

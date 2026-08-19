@@ -28,6 +28,7 @@ import {
   isClosedPosition,
   type HoldingsVisibilityFilter,
 } from "./holdings-visibility";
+import { filterHoldingsByType } from "./holdings-type-filter";
 
 type PerformanceMode = "daily" | "pnl" | "return";
 
@@ -108,12 +109,7 @@ export const HoldingsTableMobile = ({
   const filteredHoldings = useMemo(() => {
     let result = [...holdings];
 
-    if (selectedTypes.length > 0) {
-      result = result.filter((holding) => {
-        const assetType = holding.instrument?.classifications?.assetType?.name;
-        return assetType && selectedTypes.includes(assetType);
-      });
-    }
+    result = filterHoldingsByType(result, selectedTypes);
 
     if (searchQuery) {
       const lowercasedQuery = searchQuery.toLowerCase();

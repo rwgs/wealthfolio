@@ -81,7 +81,7 @@ describe("useHoldings", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps open positions visible while closed positions load", async () => {
+  it("does not retain open-only positions while closed positions load", async () => {
     const openHolding = { id: "open" } as Holding;
     const closedHolding = { id: "closed", isClosed: true } as Holding;
     let resolveClosedQuery: ((holdings: Holding[]) => void) | undefined;
@@ -109,8 +109,8 @@ describe("useHoldings", () => {
 
     rerender({ includeClosed: true });
 
-    expect(result.current.holdings).toEqual([openHolding]);
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.holdings).toEqual([]);
+    expect(result.current.isLoading).toBe(true);
 
     act(() => {
       resolveClosedQuery?.([openHolding, closedHolding]);

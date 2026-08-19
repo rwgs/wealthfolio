@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { HoldingsMobileFilterSheet } from "./holdings-mobile-filter-sheet";
@@ -32,7 +32,7 @@ vi.mock("@wealthfolio/ui/components/ui/sheet", () => ({
 }));
 
 describe("HoldingsMobileFilterSheet", () => {
-  it("hides closed positions when the account cannot provide closed history", () => {
+  it("places cash under asset type and hides unsupported closed status", () => {
     render(
       <HoldingsMobileFilterSheet
         open
@@ -51,11 +51,42 @@ describe("HoldingsMobileFilterSheet", () => {
         visibilityFilters={["open"]}
         setVisibilityFilters={vi.fn()}
         showClosedPositions={false}
+        typeOptions={[{ value: "CASH", label: "Cash" }]}
       />,
     );
 
-    expect(screen.getByText("Open")).toBeInTheDocument();
-    expect(screen.getByText("Cash")).toBeInTheDocument();
+    const assetTypeSection = screen.getByText("Asset Type").parentElement;
+
+    expect(assetTypeSection).not.toBeNull();
+    expect(within(assetTypeSection!).getByText("Cash")).toBeInTheDocument();
+    expect(screen.queryByText("Status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Open")).not.toBeInTheDocument();
     expect(screen.queryByText("Closed")).not.toBeInTheDocument();
+  });
+
+  it("exposes the selected position status to assistive technology", () => {
+    render(
+      <HoldingsMobileFilterSheet
+        open
+        onOpenChange={vi.fn()}
+        accountFilter={{ type: "all" }}
+        onAccountScopeChange={vi.fn()}
+        accounts={[]}
+        portfolios={[]}
+        selectedTypes={[]}
+        setSelectedTypes={vi.fn()}
+        showAccountScope={false}
+        sortBy="marketValue"
+        setSortBy={vi.fn()}
+        performanceMode="pnl"
+        setPerformanceMode={vi.fn()}
+        visibilityFilters={["closed"]}
+        setVisibilityFilters={vi.fn()}
+        showClosedPositions
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Open" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Closed" })).toHaveAttribute("aria-pressed", "true");
   });
 });

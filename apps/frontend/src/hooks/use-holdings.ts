@@ -13,25 +13,6 @@ interface UseHoldingsWithClosedProbeOptions {
   probeClosedWhenEmpty: boolean;
 }
 
-function accountScopesEqual(left: AccountScope, right: AccountScope): boolean {
-  if (left.type !== right.type) return false;
-
-  switch (left.type) {
-    case "account":
-      return right.type === "account" && left.accountId === right.accountId;
-    case "accounts":
-      return (
-        right.type === "accounts" &&
-        left.accountIds.length === right.accountIds.length &&
-        left.accountIds.every((accountId, index) => accountId === right.accountIds[index])
-      );
-    case "portfolio":
-      return right.type === "portfolio" && left.portfolioId === right.portfolioId;
-    case "all":
-      return right.type === "all";
-  }
-}
-
 export function useHoldings(accountFilter: AccountScope, options: UseHoldingsOptions = {}) {
   const includeClosed = options.includeClosed ?? false;
   const hasValidScope = (() => {
@@ -60,12 +41,6 @@ export function useHoldings(accountFilter: AccountScope, options: UseHoldingsOpt
     queryKey: [QueryKeys.HOLDINGS, accountFilter, { includeClosed }],
     queryFn: () => getHoldingsList(accountFilter, { includeClosed }),
     enabled: isEnabled,
-    placeholderData: (previousData, previousQuery) => {
-      const previousScope = previousQuery?.queryKey[1] as AccountScope | undefined;
-      return previousScope && accountScopesEqual(previousScope, accountFilter)
-        ? previousData
-        : undefined;
-    },
   });
 
   return { holdings, dataUpdatedAt, isLoading, isError, error };

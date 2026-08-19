@@ -69,6 +69,19 @@
   "book_cost": "取得原価",
   "total_value": "評価額合計",
   "asset_type": "資産種別",
+  "instrument_types": {
+    "BOND_CORPORATE": "社債",
+    "BOND_GOVERNMENT": "国債",
+    "CASH": "現金",
+    "CRYPTO_NATIVE": "暗号資産",
+    "ETF": "ETF",
+    "FUND_MUTUAL": "投資信託",
+    "FUTURE": "先物",
+    "MONEY_MARKET_DEBT": "短期金融商品",
+    "OPTION": "オプション",
+    "STABLECOIN": "ステーブルコイン",
+    "STOCK_COMMON": "株式"
+  },
   "currency": "通貨",
   "show_values_in_asset": "資産通貨で表示",
   "show_values_in_base": "基準通貨で表示",
@@ -128,6 +141,9 @@
   "manual": "手動",
   "open": "保有中",
   "closed": "決済済み",
+  "cost_basis": "取得価額",
+  "sale_proceeds": "売却代金",
+  "realized_return": "実現損益率",
   "qty": "数量",
   "shares_label": "株数",
   "contracts": "枚",
@@ -217,5 +233,6 @@
   "assets_need_valuations_other": "{{count}}件の資産で評価額の更新が必要です",
   "category_breakdown": "カテゴリ別内訳",
   "personal_assets": "個人資産",
-  "health_filter_active": "ヘルスセンターが指摘した保有資産を表示しています"
+  "health_filter_active": "ヘルスセンターが指摘した保有資産を表示しています",
+  "closing_cash_flow": "決済キャッシュフロー"
 }
