@@ -87,11 +87,50 @@ describe("holdings type filters", () => {
     expect(filterHoldingsByType([stock, etf, cash], ["ETF", "STOCK_COMMON"])).toEqual([stock, etf]);
   });
 
+  it("keeps cash balances distinct from securities classified as Cash Balance", () => {
+    // "CASH" is a real instrument_type taxonomy key (the "Cash Balance" category), so
+    // the synthetic cash pseudo-type must not reuse it.
+    const cashBalanceFund = holding("mmf", HoldingType.SECURITY, {
+      key: "CASH",
+      name: "Cash Balance",
+    });
+
+    expect(getHoldingTypeFilterValue(cashBalanceFund)).not.toBe(CASH_HOLDING_TYPE_KEY);
+    expect(filterHoldingsByType([cash, cashBalanceFund], [CASH_HOLDING_TYPE_KEY])).toEqual([cash]);
+    expect(filterHoldingsByType([cash, cashBalanceFund], ["CASH"])).toEqual([cashBalanceFund]);
+    expect(getHoldingTypeFilterOption(cashBalanceFund, "Cash")).toEqual({
+      value: "CASH",
+      fallbackLabel: "Cash Balance",
+    });
+  });
+
+  it("resolves the cash label outside the instrument type namespace", () => {
+    expect(getHoldingTypeTranslationKey(CASH_HOLDING_TYPE_KEY)).toBe("holdings:cash");
+    expect(getHoldingTypeTranslationKey("CASH")).toBe("holdings:instrument_types.CASH");
+  });
+
   it("defines the same system instrument types in every locale", () => {
     const englishKeys = Object.keys(enHoldings.instrument_types).sort();
 
     for (const locale of [deHoldings, esHoldings, frHoldings, jaHoldings, koHoldings, zhHoldings]) {
       expect(Object.keys(locale.instrument_types).sort()).toEqual(englishKeys);
+    }
+  });
+
+  it("labels the Cash Balance category distinctly from cash in every locale", () => {
+    // The two are separate values now, so they must also read as separate things. Dropping
+    // instrument_types.CASH would silently fall back to the English taxonomy name instead.
+    for (const locale of [
+      enHoldings,
+      deHoldings,
+      esHoldings,
+      frHoldings,
+      jaHoldings,
+      koHoldings,
+      zhHoldings,
+    ]) {
+      expect(locale.instrument_types.CASH).toBeTruthy();
+      expect(locale.instrument_types.CASH).not.toBe(locale.cash);
     }
   });
 });

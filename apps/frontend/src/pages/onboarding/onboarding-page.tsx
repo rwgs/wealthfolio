@@ -4,6 +4,7 @@ import { usePlatform } from "@/hooks/use-platform";
 import { useSettings } from "@/hooks/use-settings";
 import { WEALTHFOLIO_CONNECT_PORTAL_URL } from "@/lib/constants";
 import { useSettingsContext } from "@/lib/settings-provider";
+import { cn } from "@/lib/utils";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import { Icons } from "@wealthfolio/ui/components/ui/icons";
 import { AnimatePresence, motion } from "motion/react";
@@ -37,6 +38,7 @@ const OnboardingPage = () => {
   const maxSteps = isMobile ? MOBILE_MAX_STEPS : DESKTOP_MAX_STEPS;
   const completionRoute = isMobile ? "/settings" : "/settings/accounts";
   const isFinalStep = currentStep === maxSteps;
+  const isAppearanceStep = currentStep === 3;
 
   if (isSettingsLoading) return null;
   if (isSettingsError) {
@@ -76,12 +78,12 @@ const OnboardingPage = () => {
       className="bg-background flex min-h-full flex-col pt-[env(safe-area-inset-top)]"
     >
       {/* Fixed Header with Logo and Steppers */}
-      <header className="flex-none px-4 pt-8 sm:px-6 sm:pt-8">
+      <header className={cn("flex-none px-4 sm:px-6", isAppearanceStep ? "pt-4" : "pt-8 sm:pt-8")}>
         <div className="flex flex-col items-center">
           {/* Logo */}
           <img
             alt="Wealthfolio"
-            className="mb-3 h-16 w-16 sm:h-16 sm:w-16"
+            className={cn(isAppearanceStep ? "mb-2 h-12 w-12" : "mb-3 h-16 w-16 sm:h-16 sm:w-16")}
             src="/logo-vantage.png"
           />
 
@@ -136,7 +138,12 @@ const OnboardingPage = () => {
 
       {/* Fixed Footer */}
       <footer className="flex-none pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto max-w-4xl px-4 pb-8 pt-6 sm:px-6 sm:pb-8 sm:pt-4">
+        <div
+          className={cn(
+            "mx-auto max-w-4xl px-4 sm:px-6",
+            isAppearanceStep ? "pb-4 pt-2" : "pb-8 pt-6 sm:pb-8 sm:pt-4",
+          )}
+        >
           {isFinalStep ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="order-2 sm:order-1">

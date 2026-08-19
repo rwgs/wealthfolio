@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "Bono corporativo",
     "BOND_GOVERNMENT": "Bono del Estado",
-    "CASH": "Efectivo",
+    "CASH": "Saldo de efectivo",
     "CRYPTO_NATIVE": "Criptomoneda",
     "ETF": "ETF",
     "FUND_MUTUAL": "Fondo de inversión",

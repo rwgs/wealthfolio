@@ -216,7 +216,7 @@ export const HoldingsTable = ({
         searchBy="symbol"
         filters={filters}
         showColumnToggle={true}
-        storageKey="holdings-table-v3"
+        storageKey="holdings-table-v4"
         defaultColumnVisibility={
           isClosedView
             ? {

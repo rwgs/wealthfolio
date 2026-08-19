@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "社債",
     "BOND_GOVERNMENT": "国債",
-    "CASH": "現金",
+    "CASH": "現金残高",
     "CRYPTO_NATIVE": "暗号資産",
     "ETF": "ETF",
     "FUND_MUTUAL": "投資信託",

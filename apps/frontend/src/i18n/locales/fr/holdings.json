@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "Obligation d'entreprise",
     "BOND_GOVERNMENT": "Obligation d'État",
-    "CASH": "Liquidités",
+    "CASH": "Solde de liquidités",
     "CRYPTO_NATIVE": "Crypto-actif",
     "ETF": "ETF",
     "FUND_MUTUAL": "Fonds commun de placement",

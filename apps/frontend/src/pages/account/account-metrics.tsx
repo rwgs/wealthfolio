@@ -315,17 +315,19 @@ const AccountMetrics: React.FC<AccountMetricsProps> = ({
               </Tooltip>
             </TooltipProvider>
           ) : null}
-          {valuation && !hideBalanceEdit ? (
-            <EditableBalance
-              account={valuation}
-              initialBalance={valuation?.cashBalance || 0}
-              currency={displayCurrency}
-            />
-          ) : (
-            <span className="text-lg font-extrabold">
-              <PrivacyAmount value={valuation?.cashBalance || 0} currency={displayCurrency} />
-            </span>
-          )}
+          <div data-testid="account-cash-balance-value">
+            {valuation && !hideBalanceEdit ? (
+              <EditableBalance
+                account={valuation}
+                initialBalance={valuation?.cashBalance || 0}
+                currency={displayCurrency}
+              />
+            ) : (
+              <span className="text-lg font-extrabold">
+                <PrivacyAmount value={valuation?.cashBalance || 0} currency={displayCurrency} />
+              </span>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className={cn(compact ? "space-y-4 pb-2" : "space-y-6 pb-4")}>

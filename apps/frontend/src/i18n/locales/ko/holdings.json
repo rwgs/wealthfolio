@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "회사채",
     "BOND_GOVERNMENT": "국채",
-    "CASH": "현금",
+    "CASH": "현금 잔액",
     "CRYPTO_NATIVE": "암호화폐",
     "ETF": "ETF",
     "FUND_MUTUAL": "뮤추얼 펀드",

@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "公司债券",
     "BOND_GOVERNMENT": "政府债券",
-    "CASH": "现金",
+    "CASH": "现金余额",
     "CRYPTO_NATIVE": "加密货币",
     "ETF": "ETF",
     "FUND_MUTUAL": "共同基金",

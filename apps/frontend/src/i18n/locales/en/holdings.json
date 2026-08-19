@@ -72,7 +72,7 @@
   "instrument_types": {
     "BOND_CORPORATE": "Corporate Bond",
     "BOND_GOVERNMENT": "Government Bond",
-    "CASH": "Cash",
+    "CASH": "Cash Balance",
     "CRYPTO_NATIVE": "Cryptocurrency",
     "ETF": "ETF",
     "FUND_MUTUAL": "Mutual Fund",
