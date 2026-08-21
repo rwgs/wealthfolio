@@ -4,6 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `registerTranslations()` and `useAddonTranslation()` for translating addon UI
+  strings. Resources live on a dedicated i18next instance inside the addon
+  sandbox, isolated from the host catalog; the language follows the host
+  setting. Requires a Wealthfolio release that ships this sandbox runtime
+  (unreleased at the time of writing). See the
+  [Addon Localization guide](../../docs/addons/addon-localization.md).
+
 ## [3.7.0] - 2026-08-10
 
 Wealthfolio 3.7 adds private packaged assets while preserving the documented

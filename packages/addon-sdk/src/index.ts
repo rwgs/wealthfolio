@@ -113,6 +113,15 @@ export { HOST_DEPENDENCIES } from './host-dependencies';
 export { ADDON_ICON_NAMES } from './icons';
 export type { AddonIconName } from './icons';
 
+// Addon translations (implemented by the host sandbox)
+export { registerTranslations, useAddonTranslation } from './i18n';
+export type {
+  AddonTranslationApi,
+  AddonTranslationBundle,
+  AddonTranslationResources,
+  AddonTranslationRuntime,
+} from './i18n';
+
 /**
  * Addons receive their context as a parameter to the enable() function.
  * Each addon gets its own isolated iframe context with scoped host APIs.

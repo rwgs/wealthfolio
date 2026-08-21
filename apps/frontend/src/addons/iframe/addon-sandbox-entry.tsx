@@ -17,7 +17,11 @@ import { SandboxAddonAssetRegistry, type SandboxAddonAsset } from "./addon-sandb
 import { applyHostTheme, type AddonThemeSnapshot } from "./addon-sandbox-theme";
 import { rewriteModuleSpecifiers } from "./addon-module-rewriter";
 import type { AddonLocalizationSnapshot } from "./addon-sandbox-localization";
-import { initSandboxI18n, setSandboxLanguage } from "./addon-sandbox-i18n";
+import {
+  initSandboxI18n,
+  installAddonTranslationRuntime,
+  setSandboxLanguage,
+} from "./addon-sandbox-i18n";
 
 const CHANNEL = "wealthfolio:addon-sandbox:v1";
 const RUNTIME_PROTOCOL_VERSION = 1;
@@ -101,6 +105,7 @@ const root = rootElement;
 // Bootstrap i18next before any addon (and its `@wealthfolio/ui` components)
 // render, seeded from the bootstrap params so there is no flash of raw keys.
 initSandboxI18n(sandboxLocalization.uiLocale);
+installAddonTranslationRuntime(ADDON_ID);
 
 function post(type: string, payload: Record<string, unknown> = {}) {
   parent.postMessage({ channel: CHANNEL, addonId: ADDON_ID, nonce: NONCE, type, ...payload }, "*");
