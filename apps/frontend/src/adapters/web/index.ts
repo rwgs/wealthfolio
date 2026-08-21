@@ -252,6 +252,7 @@ export {
   addExchangeRate,
   deleteExchangeRate,
   getExchangeRates,
+  getExchangeRatesForDates,
   updateExchangeRate,
 } from "../shared/exchange-rates";
 
