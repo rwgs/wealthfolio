@@ -240,7 +240,6 @@ export const HoldingsTable = ({
         }
         defaultSorting={[{ id: "symbol", desc: false }]}
         scrollable={true}
-        pinRowsToTop={isCashHolding}
         toolbarView={
           visibilityFilters && setVisibilityFilters ? (
             <HoldingsStatusSegmentedControl
