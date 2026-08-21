@@ -35,10 +35,11 @@ import {
 } from "@/features/spending/components/rule-item";
 import { PRESET_FLAGS } from "@/features/spending/components/rule-preset-constants";
 import { RulePresetPicker } from "@/features/spending/components/rule-preset-picker";
-import type {
-  RuleFormAccountOption,
-  RuleFormCategoryOption,
-  RuleFormValues,
+import {
+  ruleAmountPayload,
+  type RuleFormAccountOption,
+  type RuleFormCategoryOption,
+  type RuleFormValues,
 } from "@/features/spending/components/rule-form";
 import { isSpendingAccountType } from "@/features/spending/lib/constants";
 import {
@@ -173,6 +174,7 @@ export default function SpendingRulesPage() {
   };
 
   const handleSave = (values: RuleFormValues) => {
+    const { amountOp, amountValue, amountValue2 } = ruleAmountPayload(values);
     if (selectedRule) {
       update.mutate(
         {
@@ -184,6 +186,9 @@ export default function SpendingRulesPage() {
             taxonomyId: values.taxonomyId || null,
             categoryId: values.categoryId || null,
             activityType: values.activityType || null,
+            amountOp,
+            amountValue,
+            amountValue2,
             priority: values.priority,
             // Always sent explicitly: null clears the column, an id sets it, and
             // the backend rejects an isGlobal/accountId pair that disagrees.
@@ -204,6 +209,9 @@ export default function SpendingRulesPage() {
           taxonomyId: values.taxonomyId || null,
           categoryId: values.categoryId || null,
           activityType: values.activityType || null,
+          amountOp,
+          amountValue,
+          amountValue2,
           priority: values.priority,
           isGlobal: values.accountId === null,
           accountId: values.accountId,
