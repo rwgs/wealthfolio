@@ -1461,9 +1461,18 @@ impl ActivityService {
                 .any(reconciles)
         });
 
+        // Name what the figure is made of, since with a multiplier in play it is not
+        // the bare product a reader can check against the two columns in front of them.
+        let booked_from = if contract_multiplier == Decimal::ONE {
+            "quantity times unit price"
+        } else {
+            "quantity times unit price times the contract multiplier"
+        };
+
         let message = match stated_fx_rate {
             Some(rate) => format!(
-                "Quantity times unit price ({}) differs from the stated total ({} {}) by exactly the stated FX rate {}, so the price is quoted in another currency. Cost basis is booked from quantity times unit price, so it will be {} {} rather than {} {}. Restate the unit price in {}.",
+                "The value booked from {} ({}) differs from the stated total ({} {}) by exactly the stated FX rate {}, so the price is quoted in another currency. Cost basis is booked from that figure, so it will be {} {} rather than {} {}. Restate the unit price in {}.",
+                booked_from,
                 gross.round_dp(2),
                 amount.round_dp(2),
                 currency,
@@ -1475,7 +1484,8 @@ impl ActivityService {
                 currency,
             ),
             None => format!(
-                "Quantity times unit price ({} {}) does not match the stated total ({} {}). Cost basis is booked from quantity times unit price, so the total is ignored. Check the quantity and unit price, and whether the price is quoted in another currency.",
+                "The value booked from {} ({} {}) does not match the stated total ({} {}). Cost basis is booked from that figure, so the total is ignored. Check the quantity and unit price, and whether the price is quoted in another currency.",
+                booked_from,
                 gross.round_dp(2),
                 currency,
                 amount.round_dp(2),

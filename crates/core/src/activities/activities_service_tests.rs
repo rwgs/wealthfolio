@@ -6420,6 +6420,10 @@ mod tests {
             warning.contains("5000"),
             "warning should name the booked cost basis: {warning}"
         );
+        assert!(
+            warning.contains("contract multiplier"),
+            "the figure includes the multiplier, so the warning should say so: {warning}"
+        );
     }
 
     /// A stated rate small enough that dividing by it leaves the range of a decimal is
