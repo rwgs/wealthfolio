@@ -1402,12 +1402,17 @@ impl ActivityService {
     /// settlement in another produces the same disagreement from a row that imports
     /// correctly, so which figure is authoritative is the user's call.
     ///
-    /// Bonds and options are exempt: the calculator already prefers the broker total
-    /// for bonds, which quote as a percentage of par, and scales the price by the
-    /// contract multiplier for options, so a disagreement there is expected.
+    /// Bonds and options are exempt. The calculator already prefers the broker total
+    /// for bonds, which quote as a percentage of par, and an option's multiplier is
+    /// only assumed to be the standard 100 when the asset carries no metadata saying
+    /// otherwise, so a disagreement on either is expected rather than wrong. Any other
+    /// asset can still carry a contract multiplier — a future does, having no
+    /// instrument type of its own — and the calculator applies it, so this check
+    /// applies it too rather than reading the row as bare quantity times price.
     fn check_trade_total_consistency(
         activity: &mut ActivityImport,
         instrument_type: Option<&InstrumentType>,
+        contract_multiplier: Decimal,
     ) {
         if !PRICE_BEARING_ACTIVITY_TYPES.contains(&activity.activity_type.as_str()) {
             return;
@@ -1433,7 +1438,12 @@ impl ActivityService {
         // it filled at and stays well below any currency or unit mismatch.
         let charges =
             activity.fee.unwrap_or_default().abs() + activity.tax.unwrap_or_default().abs();
-        let gross = quantity * unit_price;
+        let Some(gross) = quantity
+            .checked_mul(unit_price)
+            .and_then(|gross| gross.checked_mul(contract_multiplier))
+        else {
+            return;
+        };
         let reconciles = |expected: Decimal| {
             let rounding = (expected * dec!(0.01)).abs().max(dec!(0.01));
             (amount - expected).abs() <= charges + rounding
@@ -1444,8 +1454,12 @@ impl ActivityService {
         }
 
         let currency = activity.currency.trim();
-        let stated_fx_rate = magnitude(activity.fx_rate)
-            .filter(|rate| reconciles(gross * rate) || reconciles(gross / rate));
+        let stated_fx_rate = magnitude(activity.fx_rate).filter(|rate| {
+            [gross.checked_mul(*rate), gross.checked_div(*rate)]
+                .into_iter()
+                .flatten()
+                .any(reconciles)
+        });
 
         let message = match stated_fx_rate {
             Some(rate) => format!(
@@ -3493,6 +3507,7 @@ impl ActivityService {
             }
 
             let mut asset_currency: Option<String> = None;
+            let mut contract_multiplier = Decimal::ONE;
             let quote_ccy_input = if matches!(
                 effective_instrument_type,
                 Some(InstrumentType::Crypto | InstrumentType::Fx)
@@ -3546,6 +3561,7 @@ impl ActivityService {
             if let Some(ref id) = existing_id {
                 activity.asset_id = Some(id.clone());
                 if let Ok(asset) = self.asset_service.get_asset_by_id(id) {
+                    contract_multiplier = asset.contract_multiplier();
                     activity.symbol_name = asset.name;
                     asset_currency = Some(asset.quote_ccy.clone());
                     if activity.quote_mode.is_none() {
@@ -3674,7 +3690,11 @@ impl ActivityService {
 
             activity.is_valid = true;
             self.validate_currency(&mut activity, &account_currency);
-            Self::check_trade_total_consistency(&mut activity, effective_instrument_type.as_ref());
+            Self::check_trade_total_consistency(
+                &mut activity,
+                effective_instrument_type.as_ref(),
+                contract_multiplier,
+            );
             activities_with_status.push(activity);
         }
 

@@ -6229,6 +6229,17 @@ mod tests {
             Some(InstrumentType::Bond),
             "USD",
         ));
+        // A future: no dedicated instrument type, so it is an equity-like asset
+        // carrying its contract multiplier in metadata.
+        let mut future = create_test_asset_with_instrument(
+            "esu6-uuid",
+            "ESU6",
+            Some("ARCX"),
+            Some(InstrumentType::Equity),
+            "USD",
+        );
+        future.metadata = Some(json!({ "contractMultiplier": 50 }));
+        asset_service.add_asset(future);
 
         let activity_service = ActivityService::new(
             activity_repository,
@@ -6358,6 +6369,92 @@ mod tests {
             dec!(10000),
             dec!(98.5),
             dec!(9850),
+            Some(dec!(0)),
+            None,
+        ))
+        .await;
+
+        assert_eq!(unit_price_warning(&checked), None);
+    }
+
+    /// A future books quantity * unit price * contract multiplier, so a total that
+    /// states the multiplier-inclusive value agrees with what the calculator books and
+    /// is not a mismatch.
+    #[tokio::test]
+    async fn test_check_import_reconciles_a_trade_total_through_the_contract_multiplier() {
+        let checked = check_trade_total_import(trade_total_import(
+            "ESU6",
+            None,
+            dec!(1),
+            dec!(100),
+            dec!(5000),
+            Some(dec!(0)),
+            None,
+        ))
+        .await;
+
+        assert_eq!(unit_price_warning(&checked), None);
+    }
+
+    /// The multiplier makes the check agree with the calculator; it does not switch the
+    /// check off, so a foreign-listed future is still flagged.
+    #[tokio::test]
+    async fn test_check_import_still_flags_a_contract_multiplier_row_quoted_in_another_currency() {
+        let checked = check_trade_total_import(trade_total_import(
+            "ESU6",
+            None,
+            dec!(1),
+            dec!(100),
+            dec!(6750),
+            Some(dec!(0)),
+            Some(dec!(1.35)),
+        ))
+        .await;
+
+        let warning = unit_price_warning(&checked).expect("mismatch should be flagged");
+        assert!(
+            warning.contains("1.35"),
+            "warning should name the stated FX rate: {warning}"
+        );
+        assert!(
+            warning.contains("5000"),
+            "warning should name the booked cost basis: {warning}"
+        );
+    }
+
+    /// A stated rate small enough that dividing by it leaves the range of a decimal is
+    /// still a positive rate the importer accepts. It cannot explain the gap, and one
+    /// such row must not take the whole batch down with it.
+    #[tokio::test]
+    async fn test_check_import_survives_an_fx_rate_too_small_to_divide_by() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(10),
+            dec!(1),
+            dec!(2),
+            Some(dec!(0)),
+            Some(dec!(0.0000000000000000000000000001)),
+        ))
+        .await;
+
+        let warning = unit_price_warning(&checked).expect("mismatch should be flagged");
+        assert!(
+            !warning.contains("FX rate"),
+            "a rate that cannot explain the gap should not be claimed to: {warning}"
+        );
+    }
+
+    /// Quantity times unit price is not always representable either, and a value we
+    /// cannot compute is a value we cannot say anything about.
+    #[tokio::test]
+    async fn test_check_import_survives_a_trade_value_too_large_to_represent() {
+        let checked = check_trade_total_import(trade_total_import(
+            "KWEB",
+            None,
+            dec!(10000000000000000000000000000),
+            dec!(10),
+            dec!(2),
             Some(dec!(0)),
             None,
         ))
