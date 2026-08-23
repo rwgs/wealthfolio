@@ -318,6 +318,7 @@
       "current_fund_balance": "Aktueller Fondssaldo",
       "monthly_fund_contribution": "Monatlicher Fondsbeitrag",
       "fund_return_before_payout": "Fondsrendite vor Auszahlung",
+      "fund_payout_rate": "Auszahlungsrate",
       "monthly_payout_after_tax": "Monatliche Auszahlung nach Steuern",
       "payout_estimate_note": "Die geschätzte Auszahlung verwendet {{pct}} %/Jahr des prognostizierten Fondssaldos, sofern Sie keine monatliche Auszahlung eingeben.",
       "start_age": "Startalter",

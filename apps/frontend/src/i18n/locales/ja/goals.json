@@ -318,6 +318,7 @@
       "current_fund_balance": "現在のファンド残高",
       "monthly_fund_contribution": "毎月のファンド拠出額",
       "fund_return_before_payout": "受取開始前のファンドリターン",
+      "fund_payout_rate": "受取率",
       "monthly_payout_after_tax": "税引後の毎月の受取額",
       "payout_estimate_note": "毎月の受取額を入力しない場合、予想ファンド残高の{{pct}}%/年を推定受取額として使用します。",
       "start_age": "開始年齢",

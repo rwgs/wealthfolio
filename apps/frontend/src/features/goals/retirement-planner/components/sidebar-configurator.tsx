@@ -58,9 +58,11 @@ const MAX_RETIREMENT_FEE = 0.1;
 const MAX_RETIREMENT_VOLATILITY = 1;
 const MAX_RETIREMENT_CONTRIBUTION_GROWTH = 0.25;
 const MAX_RETIREMENT_INCOME_GROWTH = 0.2;
+const MAX_RETIREMENT_DC_PAYOUT_RATE = 0.25;
 const FEE_SLIDER_INCREMENT = 0.01;
 const VOLATILITY_SLIDER_INCREMENT = 0.1;
 const CONTRIBUTION_GROWTH_SLIDER_INCREMENT = 0.05;
+const DEFAULT_DC_PAYOUT_SLIDER_MAX = 0.1;
 const HIGH_INFLATION_WARNING_THRESHOLD = DEFAULT_INFLATION_SLIDER_MAX;
 const HIGH_FEE_WARNING_THRESHOLD = DEFAULT_FEE_SLIDER_MAX;
 const HIGH_VOLATILITY_WARNING_THRESHOLD = DEFAULT_VOLATILITY_SLIDER_MAX;
@@ -1277,6 +1279,22 @@ export function SidebarConfigurator({
                                 s.accumulationReturn ?? draft.investment.preRetirementAnnualReturn,
                               )}
                             />
+                            <LeverRow
+                              label={t("goals:sidebar.income.fund_payout_rate")}
+                              value={s.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE}
+                              onChange={(v) => updateStream(s.id, { payoutRate: v })}
+                              min={0}
+                              max={rateSliderMaxFor(
+                                s.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE,
+                                DEFAULT_DC_PAYOUT_SLIDER_MAX,
+                                RATE_SLIDER_INCREMENT,
+                                MAX_RETIREMENT_DC_PAYOUT_RATE,
+                              )}
+                              inputMax={MAX_RETIREMENT_DC_PAYOUT_RATE}
+                              step={0.001}
+                              suffix="%"
+                              format={(v) => (v * 100).toFixed(1)}
+                            />
                             {s.startAge <= draft.personal.currentAge && (
                               <LeverRow
                                 label={t("goals:sidebar.income.monthly_payout_after_tax")}
@@ -1294,7 +1312,7 @@ export function SidebarConfigurator({
                             <p className="text-muted-foreground px-1 text-[11px] leading-relaxed">
                               {t("goals:sidebar.income.payout_estimate_note", {
                                 pct: numberFormatting.formatDecimal(
-                                  DEFAULT_DC_PAYOUT_ESTIMATE_RATE * 100,
+                                  (s.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE) * 100,
                                   { minimumFractionDigits: 1, maximumFractionDigits: 1 },
                                 ),
                               })}

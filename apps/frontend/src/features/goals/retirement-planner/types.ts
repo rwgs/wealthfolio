@@ -209,6 +209,8 @@ export interface RetirementIncomeStream {
   currentValue?: number;
   monthlyContribution?: number;
   accumulationReturn?: number;
+  /** Annual draw rate applied to the projected fund balance once payouts start. */
+  payoutRate?: number;
 }
 
 export interface InvestmentAssumptions {

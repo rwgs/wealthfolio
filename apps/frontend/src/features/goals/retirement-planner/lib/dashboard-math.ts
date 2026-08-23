@@ -36,8 +36,9 @@ function projectedDcMonthlyPayout(
   retirementAge: number,
   defaultAccumulationReturn: number,
 ) {
+  const payoutRate = Math.max(0, stream.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE);
   if (stream.startAge <= currentAge) {
-    const fallback = (Math.max(0, stream.currentValue ?? 0) * DEFAULT_DC_PAYOUT_ESTIMATE_RATE) / 12;
+    const fallback = (Math.max(0, stream.currentValue ?? 0) * payoutRate) / 12;
     return Math.max(0, stream.monthlyAmount ?? fallback);
   }
   const totalYears = Math.max(0, stream.startAge - currentAge);
@@ -58,7 +59,7 @@ function projectedDcMonthlyPayout(
       ? (annualContributionEndValue * (Math.pow(1 + r, contribYears) - 1)) / r
       : monthly * 12 * contribYears;
   const fvAnnuity = fvAnnuityAtStop * Math.pow(1 + r, growthOnlyYears);
-  return ((fvLump + fvAnnuity) * DEFAULT_DC_PAYOUT_ESTIMATE_RATE) / 12;
+  return ((fvLump + fvAnnuity) * payoutRate) / 12;
 }
 
 export function projectedAnnualIncomeNominalAtAge(
