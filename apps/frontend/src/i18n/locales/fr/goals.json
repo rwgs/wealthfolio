@@ -318,6 +318,7 @@
       "current_fund_balance": "Solde actuel du fonds",
       "monthly_fund_contribution": "Cotisation mensuelle au fonds",
       "fund_return_before_payout": "Rendement du fonds avant versement",
+      "fund_payout_rate": "Taux de versement",
       "monthly_payout_after_tax": "Versement mensuel après impôt",
       "payout_estimate_note": "Le versement estimé utilise {{pct}} %/an du solde projeté du fonds, sauf si vous saisissez un versement mensuel.",
       "start_age": "Âge de début",

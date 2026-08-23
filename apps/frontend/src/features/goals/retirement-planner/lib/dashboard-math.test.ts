@@ -1,10 +1,32 @@
 import { describe, expect, it } from "vitest";
+import type { RetirementIncomeStream, RetirementPlan } from "../types";
 import {
   deriveRetirementReadiness,
+  projectedAnnualIncomeNominalAtAge,
   resolveCoverageAnnualNominalValues,
   resolveFundedProgress,
   resolvePortfolioDrawRate,
 } from "./dashboard-math";
+import { DEFAULT_RETIREMENT_PLAN } from "./plan-adapter";
+
+function planWithFund(stream: Partial<RetirementIncomeStream>): RetirementPlan {
+  return {
+    ...DEFAULT_RETIREMENT_PLAN,
+    personal: { ...DEFAULT_RETIREMENT_PLAN.personal, currentAge: 45, targetRetirementAge: 65 },
+    incomeStreams: [
+      {
+        id: "fund",
+        label: "Pension fund",
+        streamType: "dc",
+        startAge: 65,
+        adjustForInflation: false,
+        currentValue: 120_000,
+        accumulationReturn: 0,
+        ...stream,
+      },
+    ],
+  };
+}
 
 describe("retirement dashboard math", () => {
   it("does not inflate backend nominal budget fallback values again", () => {
@@ -95,6 +117,13 @@ describe("retirement dashboard math", () => {
         horizonAge: 90,
       }),
     ).toMatchObject({ tone: "bad", problem: "portfolio-depletion" });
+  });
+
+  it("draws fund income at the stream's payout rate, defaulting to 3.5%/yr", () => {
+    expect(projectedAnnualIncomeNominalAtAge(planWithFund({}), 65, 65)).toBeCloseTo(4_200, 6);
+    expect(
+      projectedAnnualIncomeNominalAtAge(planWithFund({ payoutRate: 0.06 }), 65, 65),
+    ).toBeCloseTo(7_200, 6);
   });
 
   it("shows portfolio draw rate only when meaningful", () => {

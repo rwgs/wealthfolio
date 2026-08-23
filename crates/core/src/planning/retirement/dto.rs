@@ -1039,6 +1039,7 @@ mod tests {
             current_value: None,
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         });
 
         let budget = compute_budget_breakdown(&plan, 65);

@@ -22,6 +22,7 @@ const GOAL_LIFECYCLE_ARCHIVED: &str = "archived";
 const RETIREMENT_MIN_ANNUAL_RETURN: f64 = -0.20;
 const RETIREMENT_MAX_ANNUAL_RETURN: f64 = 0.50;
 const RETIREMENT_MAX_ANNUAL_INVESTMENT_FEE: f64 = 0.10;
+const RETIREMENT_MAX_DC_PAYOUT_RATE: f64 = 0.25;
 const RETIREMENT_MAX_ANNUAL_VOLATILITY: f64 = 1.0;
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -320,6 +321,14 @@ pub fn validate_retirement_plan(plan: &RetirementPlan) -> Result<()> {
                 value,
                 RETIREMENT_MIN_ANNUAL_RETURN,
                 RETIREMENT_MAX_ANNUAL_RETURN,
+            )?;
+        }
+        if let Some(value) = stream.payout_rate {
+            validate_finite_range(
+                "Defined-contribution payout rate",
+                value,
+                0.0,
+                RETIREMENT_MAX_DC_PAYOUT_RATE,
             )?;
         }
     }
@@ -1489,6 +1498,7 @@ mod tests {
             current_value: None,
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         });
         assert!(validate_retirement_plan(&plan)
             .expect_err("negative income should be rejected")
@@ -1530,6 +1540,7 @@ mod tests {
             current_value: Some(10_000.0),
             monthly_contribution: Some(100.0),
             accumulation_return: Some(RETIREMENT_MAX_ANNUAL_RETURN),
+            payout_rate: None,
         });
 
         validate_retirement_plan(&plan).expect("frontend caps should validate");

@@ -279,10 +279,12 @@ pub(crate) fn resolve_plan_dc_payouts(
         .iter()
         .filter(|s| s.stream_type == StreamKind::DefinedContribution)
         .map(|s| {
+            let payout_rate = s
+                .payout_rate
+                .unwrap_or(DEFAULT_DC_PAYOUT_ESTIMATE_RATE)
+                .max(0.0);
             if s.start_age <= current_age {
-                let fallback = s.current_value.unwrap_or(0.0).max(0.0)
-                    * DEFAULT_DC_PAYOUT_ESTIMATE_RATE
-                    / 12.0;
+                let fallback = s.current_value.unwrap_or(0.0).max(0.0) * payout_rate / 12.0;
                 return (s.id.clone(), s.monthly_amount.unwrap_or(fallback).max(0.0));
             }
             let total_years = (s.start_age as i32 - current_age as i32).max(0) as u32;
@@ -304,7 +306,7 @@ pub(crate) fn resolve_plan_dc_payouts(
                 monthly_contrib * 12.0 * contrib_years as f64
             };
             let fv_annuity = fv_annuity_at_stop * (1.0 + r).powi(growth_only_years as i32);
-            let monthly_payout = (fv_lump + fv_annuity) * DEFAULT_DC_PAYOUT_ESTIMATE_RATE / 12.0;
+            let monthly_payout = (fv_lump + fv_annuity) * payout_rate / 12.0;
             (s.id.clone(), monthly_payout)
         })
         .collect()
@@ -941,6 +943,7 @@ mod tests {
             current_value: None,
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         });
         let target_at_50 = compute_required_capital(&p, 50).expect("target should be reachable");
         let target_at_60 = compute_required_capital(&p, 60).expect("target should be reachable");
@@ -966,6 +969,7 @@ mod tests {
             current_value: Some(10_000.0),
             monthly_contribution: Some(200.0),
             accumulation_return: Some(0.04),
+            payout_rate: None,
         };
         // Retiring at 50: contributions stop at 50, 15 years of growth-only until 65
         let payouts_at_50 = resolve_plan_dc_payouts(std::slice::from_ref(&dc), 35, 50, 0.04);
@@ -996,6 +1000,7 @@ mod tests {
             current_value: Some(100_000.0),
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         };
 
         let low = resolve_plan_dc_payouts(std::slice::from_ref(&dc), 45, 65, 0.02);
@@ -1018,6 +1023,7 @@ mod tests {
             current_value: Some(120_000.0),
             monthly_contribution: None,
             accumulation_return: Some(0.0),
+            payout_rate: None,
         };
 
         let payouts = resolve_plan_dc_payouts(&[dc], 65, 65, 0.04);
@@ -1025,6 +1031,56 @@ mod tests {
         assert!(
             (payouts.get("dc").copied().unwrap() - 350.0).abs() < 0.01,
             "120k fund should estimate 3.5%/yr / 12 as monthly payout"
+        );
+    }
+
+    #[test]
+    fn dc_payout_uses_stream_payout_rate_override() {
+        let dc = RetirementIncomeStream {
+            id: "dc".into(),
+            label: "RRSP".into(),
+            stream_type: StreamKind::DefinedContribution,
+            start_age: 65,
+            adjust_for_inflation: false,
+            annual_growth_rate: None,
+            monthly_amount: None,
+            linked_account_id: None,
+            current_value: Some(120_000.0),
+            monthly_contribution: None,
+            accumulation_return: Some(0.0),
+            payout_rate: Some(0.06),
+        };
+
+        let payouts = resolve_plan_dc_payouts(&[dc], 45, 65, 0.04);
+
+        assert!(
+            (payouts.get("dc").copied().unwrap() - 600.0).abs() < 0.01,
+            "120k fund at a 6%/yr payout rate should pay 600/mo"
+        );
+    }
+
+    #[test]
+    fn already_started_dc_fallback_uses_stream_payout_rate_override() {
+        let dc = RetirementIncomeStream {
+            id: "dc".into(),
+            label: "Active RRIF".into(),
+            stream_type: StreamKind::DefinedContribution,
+            start_age: 60,
+            adjust_for_inflation: false,
+            annual_growth_rate: None,
+            monthly_amount: None,
+            linked_account_id: None,
+            current_value: Some(120_000.0),
+            monthly_contribution: None,
+            accumulation_return: None,
+            payout_rate: Some(0.06),
+        };
+
+        let payouts = resolve_plan_dc_payouts(&[dc], 65, 65, 0.04);
+
+        assert!(
+            (payouts.get("dc").copied().unwrap() - 600.0).abs() < 0.01,
+            "already-started fund should fall back to its own payout rate"
         );
     }
 
@@ -1042,6 +1098,7 @@ mod tests {
             current_value: Some(500_000.0),
             monthly_contribution: Some(500.0),
             accumulation_return: Some(0.04),
+            payout_rate: None,
         };
 
         let payouts = resolve_plan_dc_payouts(&[dc], 65, 65, 0.04);
@@ -1068,6 +1125,7 @@ mod tests {
             current_value: Some(100_000.0),
             monthly_contribution: Some(500.0),
             accumulation_return: Some(0.04),
+            payout_rate: None,
         });
 
         let projection = project_retirement(&plan, 500_000.0);
@@ -1104,6 +1162,7 @@ mod tests {
             current_value: None,
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         });
         let target_at_60 = compute_required_capital(&p, 60).expect("target should be reachable");
         let target_at_35 = compute_required_capital(&p, 35).expect("target should be reachable");
@@ -1299,6 +1358,7 @@ mod tests {
             current_value: None,
             monthly_contribution: None,
             accumulation_return: None,
+            payout_rate: None,
         });
         let proj = project_retirement(&plan, 800_000.0);
         let at_60 = proj
