@@ -27,7 +27,11 @@ import type { TFunction } from "i18next";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DEFAULT_DC_PAYOUT_ESTIMATE_RATE } from "../lib/constants";
-import { incomeStreamMonthlyAmount, type PlannerMode } from "../lib/dashboard-math";
+import {
+  incomeStreamMonthlyAmount,
+  planAccumulationReturn,
+  type PlannerMode,
+} from "../lib/dashboard-math";
 import {
   createExpenseItem,
   expenseAgeRangeLabel,
@@ -52,6 +56,7 @@ const DEFAULT_FEE_SLIDER_MAX = 0.03;
 const DEFAULT_VOLATILITY_SLIDER_MAX = 0.5;
 const DEFAULT_CONTRIBUTION_GROWTH_SLIDER_MAX = 0.1;
 // Keep hard caps in sync with validate_retirement_plan in crates/core/src/goals/goals_service.rs.
+const MIN_RETIREMENT_RETURN = -0.2;
 const MAX_RETIREMENT_RETURN = 0.5;
 const MAX_RETIREMENT_INFLATION = 0.2;
 const MAX_RETIREMENT_FEE = 0.1;
@@ -1112,24 +1117,25 @@ export function SidebarConfigurator({
               const expanded = expandedIncomeId === s.id;
               const amount = incomeStreamMonthlyAmount(draft, s);
               const growthMeta =
-                s.streamType === "dc"
-                  ? t("goals:sidebar.income.balance_derived_payout")
-                  : s.annualGrowthRate !== undefined
-                    ? t("goals:sidebar.income.growth_meta", {
-                        pct: numberFormatting.formatDecimal(s.annualGrowthRate * 100, {
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 1,
-                        }),
-                      })
-                    : s.adjustForInflation
-                      ? t("goals:sidebar.income.inflation_indexed")
-                      : t("goals:sidebar.income.fixed_nominal");
+                s.annualGrowthRate !== undefined
+                  ? t("goals:sidebar.income.growth_meta", {
+                      pct: numberFormatting.formatDecimal(s.annualGrowthRate * 100, {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      }),
+                    })
+                  : s.adjustForInflation
+                    ? t("goals:sidebar.income.inflation_indexed")
+                    : t("goals:sidebar.income.fixed_nominal");
               const meta = [
                 t("goals:sidebar.income.age_range", {
                   start: s.startAge,
                   end: draft.personal.planningHorizonAge,
                 }),
                 growthMeta,
+                ...(s.streamType === "dc"
+                  ? [t("goals:sidebar.income.balance_derived_payout")]
+                  : []),
               ].join(" · ");
 
               return (
@@ -1209,11 +1215,6 @@ export function SidebarConfigurator({
                                 value === "dc"
                                   ? (s.monthlyContribution ?? 0)
                                   : s.monthlyContribution,
-                              accumulationReturn:
-                                value === "dc"
-                                  ? (s.accumulationReturn ??
-                                    draft.investment.preRetirementAnnualReturn)
-                                  : s.accumulationReturn,
                             })
                           }
                         />
@@ -1260,13 +1261,11 @@ export function SidebarConfigurator({
                             />
                             <LeverRow
                               label={t("goals:sidebar.income.fund_return_before_payout")}
-                              value={
-                                s.accumulationReturn ?? draft.investment.preRetirementAnnualReturn
-                              }
+                              value={s.accumulationReturn ?? planAccumulationReturn(draft)}
                               onChange={(v) => updateStream(s.id, { accumulationReturn: v })}
-                              min={0}
+                              min={MIN_RETIREMENT_RETURN}
                               max={rateSliderMaxFor(
-                                s.accumulationReturn ?? draft.investment.preRetirementAnnualReturn,
+                                s.accumulationReturn ?? planAccumulationReturn(draft),
                                 DEFAULT_RETURN_SLIDER_MAX,
                                 RATE_SLIDER_INCREMENT,
                                 MAX_RETIREMENT_RETURN,
@@ -1276,7 +1275,7 @@ export function SidebarConfigurator({
                               suffix="%"
                               format={(v) => (v * 100).toFixed(1)}
                               warning={highReturnWarning(
-                                s.accumulationReturn ?? draft.investment.preRetirementAnnualReturn,
+                                s.accumulationReturn ?? planAccumulationReturn(draft),
                               )}
                             />
                             <LeverRow
@@ -1402,7 +1401,6 @@ export function SidebarConfigurator({
                   monthlyAmount: undefined,
                   currentValue: 0,
                   monthlyContribution: 0,
-                  accumulationReturn: draft.investment.preRetirementAnnualReturn,
                   adjustForInflation: false,
                 })
               }

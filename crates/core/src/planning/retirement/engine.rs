@@ -346,6 +346,7 @@ pub(crate) fn step_plan_pension_funds(
     balances: &mut HashMap<String, f64>,
     age: u32,
     in_fire: bool,
+    default_accumulation_return: f64,
 ) {
     for s in streams {
         let has_accumulation =
@@ -357,7 +358,10 @@ pub(crate) fn step_plan_pension_funds(
             .get(&s.id)
             .unwrap_or(&s.current_value.unwrap_or(0.0));
         if age < s.start_age {
-            let r = s.accumulation_return.unwrap_or(0.04);
+            // The same fallback `resolve_plan_dc_payouts` uses, so the balance
+            // reported as an asset and the balance the payout is derived from
+            // are the same balance.
+            let r = s.accumulation_return.unwrap_or(default_accumulation_return);
             let contributions = if in_fire {
                 0.0
             } else {
@@ -745,7 +749,13 @@ pub(crate) fn project_retirement_with_mode_cached(
             buckets = next_buckets;
         }
 
-        step_plan_pension_funds(&plan.income_streams, &mut pension_balances, age, in_fire);
+        step_plan_pension_funds(
+            &plan.income_streams,
+            &mut pension_balances,
+            age,
+            in_fire,
+            plan_accumulation_return(plan),
+        );
     }
 
     FireProjection {
@@ -1142,6 +1152,65 @@ mod tests {
 
         assert!(age_64.pension_assets > 0.0);
         assert_eq!(age_65.pension_assets, 0.0);
+    }
+
+    #[test]
+    fn an_unset_fund_return_grows_the_balance_at_the_plan_rate_net_of_fees() {
+        let mut plan = base_plan();
+        plan.personal.current_age = 60;
+        plan.personal.target_retirement_age = 65;
+        plan.personal.planning_horizon_age = 70;
+        plan.investment.monthly_contribution = 0.0;
+        plan.investment.pre_retirement_annual_return = 0.10;
+        plan.investment.annual_investment_fee_rate = 0.02;
+        plan.income_streams.push(RetirementIncomeStream {
+            id: "dc".into(),
+            label: "RRSP".into(),
+            stream_type: StreamKind::DefinedContribution,
+            start_age: 65,
+            adjust_for_inflation: false,
+            annual_growth_rate: None,
+            monthly_amount: None,
+            linked_account_id: None,
+            current_value: Some(100_000.0),
+            monthly_contribution: None,
+            accumulation_return: None,
+            payout_rate: None,
+        });
+
+        let projection = project_retirement(&plan, 5_000_000.0);
+        let reported = |age: u32| {
+            projection
+                .year_by_year
+                .iter()
+                .find(|snapshot| snapshot.age == age)
+                .unwrap_or_else(|| panic!("age {age} snapshot should exist"))
+                .pension_assets
+        };
+
+        // 8%/yr: the plan's 10% net of its 2% fee. Not the gross 10%, and not the
+        // 4% constant this used to fall back to.
+        assert!((reported(60) - 100_000.0).abs() < 1e-6);
+        assert!(
+            (reported(61) - 108_000.0).abs() < 1e-6,
+            "expected the plan's net rate, got {}",
+            reported(61)
+        );
+        assert!((reported(64) - 100_000.0 * 1.08_f64.powi(4)).abs() < 1e-6);
+
+        // And the payout is taken from that same balance carried one more year,
+        // rather than from a second balance grown at a different rate.
+        let payouts = resolve_plan_dc_payouts(
+            &plan.income_streams,
+            60,
+            65,
+            plan_accumulation_return(&plan),
+        );
+        let expected = reported(64) * 1.08 * DEFAULT_DC_PAYOUT_ESTIMATE_RATE / 12.0;
+        assert!(
+            (payouts["dc"] - expected).abs() < 1e-6,
+            "the reported balance and the payout basis must be one balance"
+        );
     }
 
     #[test]
