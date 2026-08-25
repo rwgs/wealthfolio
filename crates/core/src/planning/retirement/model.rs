@@ -213,6 +213,9 @@ pub struct RetirementIncomeStream {
     pub current_value: Option<f64>,
     pub monthly_contribution: Option<f64>,
     pub accumulation_return: Option<f64>,
+    /// Annual draw rate applied to the projected fund balance once payouts start.
+    /// Falls back to `DEFAULT_DC_PAYOUT_ESTIMATE_RATE` when unset.
+    pub payout_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -22,6 +22,23 @@ export function boundedInflationFactor(rate: number, years: number) {
   return Math.max(0.01, Math.pow(1 + rate, Math.max(0, years)));
 }
 
+/** Mirror of the engine's `net_annual_return`: the fee comes off the assumption. */
+export function netAnnualReturn(grossReturn: number, annualFeeRate: number) {
+  return Math.max(-0.99, grossReturn - annualFeeRate);
+}
+
+/**
+ * Mirror of the engine's `plan_accumulation_return`, and the rate a fund with no
+ * `accumulationReturn` of its own grows at. The plan's stated return is gross of
+ * the investment fee everywhere the engine consumes it.
+ */
+export function planAccumulationReturn(plan: RetirementPlan) {
+  return netAnnualReturn(
+    plan.investment.preRetirementAnnualReturn,
+    plan.investment.annualInvestmentFeeRate,
+  );
+}
+
 export function projectedAnnualExpenseNominalAtAge(plan: RetirementPlan, age: number) {
   const yearsFromNow = Math.max(0, age - plan.personal.currentAge);
   return activeExpenseItems(plan.expenses, age).reduce((sum, item) => {
@@ -36,8 +53,9 @@ function projectedDcMonthlyPayout(
   retirementAge: number,
   defaultAccumulationReturn: number,
 ) {
+  const payoutRate = Math.max(0, stream.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE);
   if (stream.startAge <= currentAge) {
-    const fallback = (Math.max(0, stream.currentValue ?? 0) * DEFAULT_DC_PAYOUT_ESTIMATE_RATE) / 12;
+    const fallback = (Math.max(0, stream.currentValue ?? 0) * payoutRate) / 12;
     return Math.max(0, stream.monthlyAmount ?? fallback);
   }
   const totalYears = Math.max(0, stream.startAge - currentAge);
@@ -58,7 +76,7 @@ function projectedDcMonthlyPayout(
       ? (annualContributionEndValue * (Math.pow(1 + r, contribYears) - 1)) / r
       : monthly * 12 * contribYears;
   const fvAnnuity = fvAnnuityAtStop * Math.pow(1 + r, growthOnlyYears);
-  return ((fvLump + fvAnnuity) * DEFAULT_DC_PAYOUT_ESTIMATE_RATE) / 12;
+  return ((fvLump + fvAnnuity) * payoutRate) / 12;
 }
 
 export function projectedAnnualIncomeNominalAtAge(
@@ -77,7 +95,7 @@ export function projectedAnnualIncomeNominalAtAge(
             stream,
             plan.personal.currentAge,
             retirementAge,
-            plan.investment.preRetirementAnnualReturn,
+            planAccumulationReturn(plan),
           )
         : (stream.monthlyAmount ?? 0);
     const annual = baseMonthly * 12;
@@ -98,7 +116,7 @@ export function incomeStreamMonthlyAmount(plan: RetirementPlan, stream: Retireme
       stream,
       plan.personal.currentAge,
       plan.personal.targetRetirementAge,
-      plan.investment.preRetirementAnnualReturn,
+      planAccumulationReturn(plan),
     );
   }
   return stream.monthlyAmount ?? 0;

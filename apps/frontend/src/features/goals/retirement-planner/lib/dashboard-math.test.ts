@@ -1,10 +1,35 @@
 import { describe, expect, it } from "vitest";
+import type { RetirementIncomeStream, RetirementPlan } from "../types";
 import {
   deriveRetirementReadiness,
+  netAnnualReturn,
+  planAccumulationReturn,
+  projectedAnnualIncomeNominalAtAge,
   resolveCoverageAnnualNominalValues,
   resolveFundedProgress,
   resolvePortfolioDrawRate,
 } from "./dashboard-math";
+import { DEFAULT_DC_PAYOUT_ESTIMATE_RATE } from "./constants";
+import { DEFAULT_RETIREMENT_PLAN } from "./plan-adapter";
+
+function planWithFund(stream: Partial<RetirementIncomeStream>): RetirementPlan {
+  return {
+    ...DEFAULT_RETIREMENT_PLAN,
+    personal: { ...DEFAULT_RETIREMENT_PLAN.personal, currentAge: 45, targetRetirementAge: 65 },
+    incomeStreams: [
+      {
+        id: "fund",
+        label: "Pension fund",
+        streamType: "dc",
+        startAge: 65,
+        adjustForInflation: false,
+        currentValue: 120_000,
+        accumulationReturn: 0,
+        ...stream,
+      },
+    ],
+  };
+}
 
 describe("retirement dashboard math", () => {
   it("does not inflate backend nominal budget fallback values again", () => {
@@ -95,6 +120,36 @@ describe("retirement dashboard math", () => {
         horizonAge: 90,
       }),
     ).toMatchObject({ tone: "bad", problem: "portfolio-depletion" });
+  });
+
+  it("grows a fund with no return of its own at the plan rate net of fees", () => {
+    // The engine's fallback is `plan_accumulation_return`, which is net of the
+    // investment fee. The preview used the gross assumption, so the two
+    // disagreed by the fee drag for any fund that never set its own return.
+    const plan = planWithFund({ accumulationReturn: undefined });
+    const net = planAccumulationReturn(plan);
+
+    expect(net).toBeLessThan(plan.investment.preRetirementAnnualReturn);
+    expect(net).toBeCloseTo(
+      netAnnualReturn(
+        plan.investment.preRetirementAnnualReturn,
+        plan.investment.annualInvestmentFeeRate,
+      ),
+      12,
+    );
+
+    const balanceAt65 = 120_000 * Math.pow(1 + net, 20);
+    expect(projectedAnnualIncomeNominalAtAge(plan, 65, 65)).toBeCloseTo(
+      balanceAt65 * DEFAULT_DC_PAYOUT_ESTIMATE_RATE,
+      4,
+    );
+  });
+
+  it("draws fund income at the stream's payout rate, defaulting to 3.5%/yr", () => {
+    expect(projectedAnnualIncomeNominalAtAge(planWithFund({}), 65, 65)).toBeCloseTo(4_200, 6);
+    expect(
+      projectedAnnualIncomeNominalAtAge(planWithFund({ payoutRate: 0.06 }), 65, 65),
+    ).toBeCloseTo(7_200, 6);
   });
 
   it("shows portfolio draw rate only when meaningful", () => {

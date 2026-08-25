@@ -318,6 +318,7 @@
       "current_fund_balance": "현재 펀드 잔액",
       "monthly_fund_contribution": "월 펀드 납입액",
       "fund_return_before_payout": "지급 전 펀드 수익률",
+      "fund_payout_rate": "지급률",
       "monthly_payout_after_tax": "세후 월 지급액",
       "payout_estimate_note": "월 지급액을 직접 입력하지 않으면 예상 지급액은 예측된 펀드 잔액의 연 {{pct}}%로 계산됩니다.",
       "start_age": "시작 연령",
