@@ -2448,6 +2448,7 @@ export interface RetirementOverview {
   fundedThroughAge: number | null;
   failureAge: number | null;
   spendingShortfallAge: number | null;
+  incomeStreamExhaustion?: IncomeStreamExhaustion[];
   requiredAdditionalMonthlyContribution: number;
   suggestedGoalAgeIfUnchanged: number | null;
   coastAmountToday: number;
@@ -2457,6 +2458,13 @@ export interface RetirementOverview {
   budgetBreakdown: BudgetBreakdown;
   targetReconciliation: TargetReconciliation;
   trajectory: RetirementTrajectoryPoint[];
+}
+
+/** A drawdown fund that runs out, and the age its balance reaches zero. */
+export interface IncomeStreamExhaustion {
+  streamId: string;
+  label: string;
+  exhaustedAge: number;
 }
 
 export interface RetirementTrajectoryPoint {

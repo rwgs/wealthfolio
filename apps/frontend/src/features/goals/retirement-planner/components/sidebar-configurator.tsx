@@ -29,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { DEFAULT_DC_PAYOUT_ESTIMATE_RATE } from "../lib/constants";
 import {
   incomeStreamMonthlyAmount,
+  payoutPhaseReturn,
   planAccumulationReturn,
   type PlannerMode,
 } from "../lib/dashboard-math";
@@ -46,6 +47,7 @@ import {
 import type {
   ExpenseItem,
   InvestmentAssumptions,
+  PayoutMode,
   RetirementIncomeStream,
   RetirementPlan,
   TaxProfile,
@@ -1294,6 +1296,45 @@ export function SidebarConfigurator({
                               suffix="%"
                               format={(v) => (v * 100).toFixed(1)}
                             />
+                            <div className="grid gap-2 px-1 py-3 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3">
+                              <div className="min-w-0">
+                                <div className="text-foreground text-xs font-semibold">
+                                  {t("goals:sidebar.income.fund_payout_mode")}
+                                </div>
+                                <div className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
+                                  {t("goals:sidebar.income.fund_payout_mode_help")}
+                                </div>
+                              </div>
+                              <AnimatedToggleGroup<PayoutMode>
+                                variant="secondary"
+                                size="xs"
+                                items={[
+                                  { value: "annuity", label: t("goals:sidebar.income.annuity") },
+                                  { value: "drawdown", label: t("goals:sidebar.income.drawdown") },
+                                ]}
+                                value={s.payoutMode ?? "annuity"}
+                                onValueChange={(value) => updateStream(s.id, { payoutMode: value })}
+                              />
+                            </div>
+                            {s.payoutMode === "drawdown" && (
+                              <LeverRow
+                                label={t("goals:sidebar.income.fund_return_during_payout")}
+                                value={payoutPhaseReturn(s, draft)}
+                                onChange={(v) => updateStream(s.id, { postPayoutReturn: v })}
+                                min={MIN_RETIREMENT_RETURN}
+                                max={rateSliderMaxFor(
+                                  payoutPhaseReturn(s, draft),
+                                  DEFAULT_RETURN_SLIDER_MAX,
+                                  RATE_SLIDER_INCREMENT,
+                                  MAX_RETIREMENT_RETURN,
+                                )}
+                                inputMax={MAX_RETIREMENT_RETURN}
+                                step={0.001}
+                                suffix="%"
+                                format={(v) => (v * 100).toFixed(1)}
+                                warning={highReturnWarning(payoutPhaseReturn(s, draft))}
+                              />
+                            )}
                             {s.startAge <= draft.personal.currentAge && (
                               <LeverRow
                                 label={t("goals:sidebar.income.monthly_payout_after_tax")}
@@ -1309,12 +1350,17 @@ export function SidebarConfigurator({
                               />
                             )}
                             <p className="text-muted-foreground px-1 text-[11px] leading-relaxed">
-                              {t("goals:sidebar.income.payout_estimate_note", {
-                                pct: numberFormatting.formatDecimal(
-                                  (s.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE) * 100,
-                                  { minimumFractionDigits: 1, maximumFractionDigits: 1 },
-                                ),
-                              })}
+                              {t(
+                                s.payoutMode === "drawdown"
+                                  ? "goals:sidebar.income.drawdown_note"
+                                  : "goals:sidebar.income.payout_estimate_note",
+                                {
+                                  pct: numberFormatting.formatDecimal(
+                                    (s.payoutRate ?? DEFAULT_DC_PAYOUT_ESTIMATE_RATE) * 100,
+                                    { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                                  ),
+                                },
+                              )}
                             </p>
                           </>
                         )}
