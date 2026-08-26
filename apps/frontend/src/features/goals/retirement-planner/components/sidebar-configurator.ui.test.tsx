@@ -64,4 +64,35 @@ describe("SidebarConfigurator pension fund returns", () => {
     expect(savedPlan.incomeStreams[0].streamType).toBe("dc");
     expect(savedPlan.incomeStreams[0].accumulationReturn).toBeUndefined();
   });
+
+  it("keeps a negative inherited payout return available in the control", () => {
+    const plan: RetirementPlan = {
+      ...structuredClone(DEFAULT_RETIREMENT_PLAN),
+      investment: {
+        ...structuredClone(DEFAULT_RETIREMENT_PLAN.investment),
+        retirementAnnualReturn: 0.01,
+        annualInvestmentFeeRate: 0.03,
+      },
+      incomeStreams: [
+        {
+          id: "drawdown",
+          label: "RRSP",
+          streamType: "dc",
+          startAge: 65,
+          adjustForInflation: false,
+          currentValue: 100_000,
+          payoutRate: 0.05,
+          payoutMode: "drawdown",
+        },
+      ],
+    };
+    renderConfigurator(plan, vi.fn());
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Retirement Income" }));
+    fireEvent.click(screen.getByText("RRSP").closest("button")!);
+    const row = screen.getByText("Fund return during payout").closest(".py-4")!;
+    const slider = row.querySelector<HTMLInputElement>('input[type="range"]')!;
+
+    expect(Number(slider.value)).toBeCloseTo(-0.02);
+  });
 });
