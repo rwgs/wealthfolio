@@ -358,6 +358,7 @@ export {
 export {
   archiveAllocationTarget,
   calculateRebalancePlan,
+  canonicalizeEligibleAssetIds,
   createAllocationTarget,
   deleteAllocationTarget,
   getAllocationTargetDrift,
