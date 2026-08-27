@@ -622,6 +622,8 @@ export interface Instrument {
   preferredProvider?: string | null;
   isin?: string | null;
   exchangeMic?: string | null;
+  /** Canonical market instrument type (for example EQUITY or BOND). */
+  instrumentType?: string | null;
 
   // Taxonomy-based classifications
   classifications?: AssetClassifications | null;
