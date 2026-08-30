@@ -749,7 +749,7 @@
   "cashForm": {
     "accountRequired": "계좌를 선택하세요.",
     "pickDate": "날짜 선택",
-    "amountPositive": "금액은 0보다 커야 합니다.",
+    "amountNonNegative": "금액은 음수가 될 수 없습니다.",
     "descDeposit": "이 계좌로 들어온 돈",
     "descWithdrawal": "이 계좌에서 지출하거나 지불한 돈",
     "descInterest": "이 계좌에서 발생한 이자",

@@ -552,8 +552,14 @@ const AccountPage = () => {
   });
 
   const negativeCashAuditTarget = useMemo(
-    () => buildCashAuditReviewTarget(currentNegativeCashRun, cashAuditActivities, appTimezone),
-    [appTimezone, cashAuditActivities, currentNegativeCashRun],
+    () =>
+      buildCashAuditReviewTarget(
+        currentNegativeCashRun,
+        cashAuditActivities,
+        appTimezone,
+        isLiabilityAccount,
+      ),
+    [appTimezone, cashAuditActivities, currentNegativeCashRun, isLiabilityAccount],
   );
 
   const selectedCashAuditTarget =
@@ -1228,6 +1234,7 @@ const AccountPage = () => {
           currentValuation?.accountCurrency
         }
         cashAuditTarget={selectedCashAuditTarget ?? undefined}
+        isCreditCardAccount={isLiabilityAccount}
       />
 
       {/* Bulk Holdings Modal for Transfer Holdings */}

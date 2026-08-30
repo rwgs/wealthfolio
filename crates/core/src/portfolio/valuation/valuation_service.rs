@@ -13,6 +13,9 @@ use crate::portfolio::performance::{
     classify_flow_for_scope, classify_transfer_boundary_for_account_scope, is_external_transfer,
     FlowType, PerformanceScope,
 };
+use crate::portfolio::recalculation_gate::{
+    PortfolioRecalculationGate, PortfolioRecalculationPermit,
+};
 use crate::portfolio::snapshot::{
     min_supported_snapshot_date, validate_snapshot_read_date, HoldingsTimeline, Position,
     SnapshotServiceTrait, SnapshotSource,
@@ -394,6 +397,7 @@ pub struct ValuationService {
     scoped_history_cache: Arc<RwLock<HashMap<ScopedValuationCacheKey, Vec<DailyAccountValuation>>>>,
     scoped_history_in_flight: Arc<Mutex<HashMap<ScopedValuationCacheKey, Weak<Mutex<()>>>>>,
     service_instance_id: u64,
+    recalculation_gate: Option<Arc<PortfolioRecalculationGate>>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -490,6 +494,7 @@ impl ValuationService {
             scoped_history_cache: Arc::new(RwLock::new(HashMap::new())),
             scoped_history_in_flight: Arc::new(Mutex::new(HashMap::new())),
             service_instance_id: VALUATION_SERVICE_INSTANCE_COUNTER.fetch_add(1, Ordering::Relaxed),
+            recalculation_gate: None,
         }
     }
 
@@ -505,6 +510,14 @@ impl ValuationService {
 
     pub fn with_lot_repository(mut self, lot_repository: Arc<dyn LotRepositoryTrait>) -> Self {
         self.lot_repository = Some(lot_repository);
+        self
+    }
+
+    pub fn with_recalculation_gate(
+        mut self,
+        recalculation_gate: Arc<PortfolioRecalculationGate>,
+    ) -> Self {
+        self.recalculation_gate = Some(recalculation_gate);
         self
     }
 
@@ -2616,6 +2629,19 @@ impl ValuationService {
         account_ids: &[String],
         mode: ValuationRecalcMode,
     ) -> ValuationBatchExecution {
+        let recalculation_permit: Option<PortfolioRecalculationPermit> =
+            match &self.recalculation_gate {
+                Some(gate) => Some(gate.acquire(account_ids).await),
+                None => None,
+            };
+        let mode = if recalculation_permit
+            .as_ref()
+            .is_some_and(PortfolioRecalculationPermit::force_full)
+        {
+            ValuationRecalcMode::Full
+        } else {
+            mode
+        };
         let base_currency = normalize_currency_code(
             &self
                 .base_currency

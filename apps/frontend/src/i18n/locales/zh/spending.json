@@ -749,7 +749,7 @@
   "cashForm": {
     "accountRequired": "请选择一个账户。",
     "pickDate": "选择日期",
-    "amountPositive": "金额必须大于零。",
+    "amountNonNegative": "金额不能为负数。",
     "descDeposit": "存入此账户的资金",
     "descWithdrawal": "从此账户花费或支付的资金",
     "descInterest": "此账户所得的利息",

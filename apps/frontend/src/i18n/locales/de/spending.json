@@ -758,7 +758,7 @@
   "cashForm": {
     "accountRequired": "Bitte wählen Sie ein Konto aus.",
     "pickDate": "Datum auswählen",
-    "amountPositive": "Der Betrag muss größer als null sein.",
+    "amountNonNegative": "Der Betrag darf nicht negativ sein.",
     "descDeposit": "Auf diesem Konto erhaltenes Geld",
     "descWithdrawal": "Von diesem Konto ausgegebenes oder bezahltes Geld",
     "descInterest": "Auf diesem Konto verdiente Zinsen",
