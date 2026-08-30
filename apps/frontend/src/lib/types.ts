@@ -227,6 +227,8 @@ export interface ActivityDetails {
   /** Canonical exchange MIC code for asset identification */
   exchangeMic?: string;
   instrumentType?: string;
+  /** Effective multiplier owned by the resolved asset. */
+  assetContractMultiplier?: string | null;
   // Sync/source metadata
   sourceSystem?: string;
   sourceRecordId?: string;
@@ -289,6 +291,8 @@ export interface ActivityCreate {
   currency?: string;
   fee?: string | number | null;
   tax?: string | number | null;
+  status?: ActivityStatus;
+  needsReview?: boolean;
   comment?: string | null;
   fxRate?: string | number | null;
   metadata?: string | Record<string, unknown>; // Metadata (serialized to JSON string before sending)
@@ -314,6 +318,8 @@ export interface ActivityUpdate {
   currency?: string;
   fee?: string | number | null;
   tax?: string | number | null;
+  status?: ActivityStatus;
+  needsReview?: boolean;
   comment?: string | null;
   fxRate?: string | number | null;
   metadata?: string | Record<string, unknown>; // Metadata (serialized to JSON string before sending)

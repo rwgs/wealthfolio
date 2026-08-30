@@ -33,6 +33,7 @@ pub(crate) use asset_resolution::asset_provider_alias_symbols;
 pub use asset_resolution::{AssetResolutionInput, AssetResolutionOutput};
 pub use assets_model::{
     build_asset_metadata, build_option_metadata, canonicalize_market_identity,
+    contract_multiplier_from_asset_metadata, instrument_default_multiplier,
     normalize_quote_ccy_code, resolve_import_quote_ccy_precedence, resolve_quote_ccy_precedence,
     Asset, AssetKind, AssetMetadata, AssetProfile, AssetSpec, BondSpec, Country,
     EnsureAssetsResult, InstrumentId, InstrumentType, NewAsset, OptionSpec, ProviderProfile,

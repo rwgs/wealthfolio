@@ -308,6 +308,8 @@ export interface ActivityCreate {
   currency?: string;
   fee?: string | number | null;
   tax?: string | number | null;
+  status?: ActivityStatus;
+  needsReview?: boolean;
   comment?: string | null;
   fxRate?: string | number | null;
   metadata?: string | Record<string, unknown>;
@@ -329,6 +331,8 @@ export interface ActivityUpdate {
   currency?: string;
   fee?: string | number | null;
   tax?: string | number | null;
+  status?: ActivityStatus;
+  needsReview?: boolean;
   comment?: string | null;
   fxRate?: string | number | null;
   metadata?: string | Record<string, unknown>;

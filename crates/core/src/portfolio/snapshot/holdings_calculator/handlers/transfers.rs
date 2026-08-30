@@ -1,7 +1,7 @@
 //! Transfer handlers (TRANSFER_IN / TRANSFER_OUT). `impl HoldingsCalculator`.
 use super::super::economics::*;
 use super::super::{HoldingsCalculator, ProjectionRun, SideEffectBuffer};
-use crate::activities::Activity;
+use crate::activities::{is_cash_symbol, Activity};
 use crate::errors::Result;
 use crate::portfolio::economic_events::{ActivityEconomicsResolver, TransferBoundary};
 use crate::portfolio::snapshot::{AccountStateSnapshot, Lot};
@@ -88,17 +88,18 @@ impl HoldingsCalculator {
         buffer: &mut SideEffectBuffer,
     ) -> Result<()> {
         let activity_currency = &activity.currency;
-        let activity_amount = activity.amt();
+        let resolved = ActivityEconomicsResolver::resolve_cash(activity, Decimal::ONE);
+        let cash_effect = resolved.signed_cash_effect.unwrap_or(Decimal::ZERO);
+        let gross_effect = resolved.signed_gross_effect.unwrap_or(Decimal::ZERO);
+        let activity_date = self.activity_local_date(activity);
         let asset_id = activity.asset_id.as_deref().unwrap_or("");
 
-        if asset_id.is_empty() {
-            // Cash transfer: book in ACTIVITY currency (amount - fee - tax)
-            let net_amount = activity_amount - activity.fee_amt() - activity.tax_amt();
-            add_cash(state, activity_currency, net_amount);
+        if asset_id.is_empty() || is_cash_symbol(asset_id) {
+            let (cash_currency, cash_effect) = cash_booking(activity, cash_effect);
+            add_cash(state, &cash_currency, cash_effect);
 
-            let activity_date = self.activity_local_date(activity);
             let amount_acct = self.convert_to_account_currency(
-                activity_amount,
+                gross_effect,
                 activity,
                 account_currency,
                 "TransferIn Cash",
@@ -106,7 +107,7 @@ impl HoldingsCalculator {
 
             let base_ccy = self.base_currency.read().unwrap();
             let amount_base = match self.fx_service.convert_currency_for_date(
-                activity_amount,
+                gross_effect,
                 activity_currency,
                 &base_ccy,
                 activity_date,
@@ -126,6 +127,9 @@ impl HoldingsCalculator {
         } else {
             // Asset transfer
             let activity_date = self.activity_local_date(activity);
+            if !cash_effect.is_zero() {
+                add_cash(state, activity_currency, cash_effect);
+            }
 
             let position = self.get_or_create_position_mut_cached(
                 state,
@@ -341,9 +345,6 @@ impl HoldingsCalculator {
                 (cost_basis, added_lots)
             };
 
-            // Book fee in ACTIVITY currency
-            add_cash(state, activity_currency, -activity.fee_amt());
-
             let cost_basis_acct = if added_lots.is_empty() {
                 self.convert_position_amount_to_account_currency(
                     cost_basis_asset_curr,
@@ -407,18 +408,18 @@ impl HoldingsCalculator {
         buffer: &mut SideEffectBuffer,
     ) -> Result<()> {
         let activity_currency = &activity.currency;
+        let resolved = ActivityEconomicsResolver::resolve_cash(activity, Decimal::ONE);
+        let cash_effect = resolved.signed_cash_effect.unwrap_or(Decimal::ZERO);
+        let gross_effect = resolved.signed_gross_effect.unwrap_or(Decimal::ZERO);
         let activity_date = self.activity_local_date(activity);
-        // Use absolute value - activity type dictates direction
-        let activity_amount = -activity.amt().abs();
         let asset_id = activity.asset_id.as_deref().unwrap_or("");
 
-        if asset_id.is_empty() {
-            // Cash transfer: book outflow in ACTIVITY currency (amount + fee + tax)
-            let net_amount = activity_amount - activity.fee_amt() - activity.tax_amt();
-            add_cash(state, activity_currency, net_amount);
+        if asset_id.is_empty() || is_cash_symbol(asset_id) {
+            let (cash_currency, cash_effect) = cash_booking(activity, cash_effect);
+            add_cash(state, &cash_currency, cash_effect);
 
             let amount_acct = self.convert_to_account_currency(
-                activity_amount,
+                gross_effect,
                 activity,
                 account_currency,
                 "TransferOut Cash",
@@ -426,7 +427,7 @@ impl HoldingsCalculator {
 
             let base_ccy = self.base_currency.read().unwrap();
             let amount_base = match self.fx_service.convert_currency_for_date(
-                activity_amount,
+                gross_effect,
                 activity_currency,
                 &base_ccy,
                 activity_date,
@@ -445,10 +446,9 @@ impl HoldingsCalculator {
             state.net_contribution_base += amount_base;
         } else {
             // Asset transfer
-            let activity_date = self.activity_local_date(activity);
-
-            // Book fee in ACTIVITY currency
-            add_cash(state, activity_currency, -activity.fee_amt());
+            if !cash_effect.is_zero() {
+                add_cash(state, activity_currency, cash_effect);
+            }
 
             if let Some(position) = state.positions.get_mut(asset_id) {
                 let position_currency = position.currency.clone();

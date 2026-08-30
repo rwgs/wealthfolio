@@ -18,6 +18,15 @@ import {
 import { AmountDisplay } from "@wealthfolio/ui/components/financial/amount-display";
 import { useTranslation } from "react-i18next";
 
+/** An activity with no stored amount booked no cash; rendering `Number(null)`
+ * would claim it moved exactly zero. */
+function StoredAmount({ activity }: { activity: ActivityDetails }) {
+  if (activity.amount === null || activity.amount.trim() === "") {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return <AmountDisplay value={Number(activity.amount)} currency={activity.currency} />;
+}
+
 interface ActivityDetailSheetProps {
   activity: ActivityDetails | null;
   open: boolean;
@@ -175,7 +184,7 @@ export function ActivityDetailSheet({ activity, open, onOpenChange }: ActivityDe
               <div className="text-right">
                 <div className="text-muted-foreground text-xs">{t("activity:field_amount")}</div>
                 <div className="text-lg font-bold">
-                  <AmountDisplay value={Number(activity.amount)} currency={activity.currency} />
+                  <StoredAmount activity={activity} />
                 </div>
               </div>
             </div>
@@ -246,7 +255,7 @@ export function ActivityDetailSheet({ activity, open, onOpenChange }: ActivityDe
             )}
             <DetailRow
               label={isOption ? t("activity:detail.total_premium") : t("activity:field_amount")}
-              value={<AmountDisplay value={Number(activity.amount)} currency={activity.currency} />}
+              value={<StoredAmount activity={activity} />}
             />
             {Number(activity.fee) !== 0 && (
               <DetailRow

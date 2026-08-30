@@ -2290,13 +2290,15 @@ impl PerformanceService {
         activity: &Activity,
         activity_type: &ActivityType,
     ) -> (Decimal, Decimal, Decimal) {
+        let resolved = ActivityEconomicsResolver::resolve_cash(activity, Decimal::ONE);
         match activity_type {
             ActivityType::Dividend | ActivityType::Interest => {
-                (activity.amt(), activity.fee_amt(), activity.tax_amt())
+                let gross_income = resolved.gross_amount.unwrap_or(Decimal::ZERO);
+                (gross_income, activity.fee_amt(), activity.tax_amt())
             }
             ActivityType::Fee => (
                 Decimal::ZERO,
-                activity.charge_amt_for(activity_type),
+                resolved.final_amount.unwrap_or(Decimal::ZERO),
                 Decimal::ZERO,
             ),
             ActivityType::Buy | ActivityType::Sell => {
@@ -2305,7 +2307,7 @@ impl PerformanceService {
             ActivityType::Tax => (
                 Decimal::ZERO,
                 Decimal::ZERO,
-                activity.charge_amt_for(activity_type),
+                resolved.final_amount.unwrap_or(Decimal::ZERO),
             ),
             // Note: fees on these cash flows (and cash transfers below) are booked
             // to cash but knowingly not attributed — only trade and income fees are
@@ -6659,6 +6661,7 @@ mod tests {
         activity.asset_id = Some("AAPL".to_string());
         activity.quantity = Some(quantity);
         activity.unit_price = Some(price);
+        activity.amount = Some(quantity * price);
         activity
     }
 
@@ -6673,6 +6676,7 @@ mod tests {
         activity.asset_id = Some("AAPL".to_string());
         activity.quantity = Some(quantity);
         activity.unit_price = Some(price);
+        activity.amount = Some(quantity * price);
         activity
     }
 
@@ -8256,6 +8260,7 @@ mod tests {
             ActivityType::Dividend,
             dec!(20),
         );
+        dividend.amount = Some(dec!(15));
         dividend.tax = Some(dec!(5));
         let activity_repo = Arc::new(TestActivityRepository::new(vec![dividend]));
         let valuation_service = Arc::new(TestValuationService::new(vec![start, end]));
@@ -8325,7 +8330,7 @@ mod tests {
         dividend.tax = Some(dec!(3));
         assert_eq!(
             PerformanceService::activity_attribution_components(&dividend, &ActivityType::Dividend),
-            (dec!(50), dec!(2), dec!(3))
+            (dec!(55), dec!(2), dec!(3))
         );
 
         let explicit_fee = activity_fixture(ActivityType::Fee, dec!(4), Decimal::ZERO);
@@ -8340,10 +8345,21 @@ mod tests {
             (Decimal::ZERO, Decimal::ZERO, dec!(7))
         );
 
-        let mut explicit_tax = activity_fixture(ActivityType::Tax, Decimal::ZERO, Decimal::ZERO);
-        explicit_tax.tax = Some(dec!(9));
+        let mut explicit_zero_tax =
+            activity_fixture(ActivityType::Tax, Decimal::ZERO, Decimal::ZERO);
+        explicit_zero_tax.tax = Some(dec!(9));
         assert_eq!(
-            PerformanceService::activity_attribution_components(&explicit_tax, &ActivityType::Tax),
+            PerformanceService::activity_attribution_components(
+                &explicit_zero_tax,
+                &ActivityType::Tax
+            ),
+            (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO)
+        );
+
+        let mut final_tax = activity_fixture(ActivityType::Tax, dec!(9), Decimal::ZERO);
+        final_tax.tax = Some(dec!(7));
+        assert_eq!(
+            PerformanceService::activity_attribution_components(&final_tax, &ActivityType::Tax),
             (Decimal::ZERO, Decimal::ZERO, dec!(9))
         );
 
