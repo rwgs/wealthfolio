@@ -12,7 +12,7 @@ use wealthfolio_connect::{
 };
 use wealthfolio_core::{
     accounts::AccountService,
-    activities::ActivityService,
+    activities::{rebuild_pending_final_cash_accounts, run_final_cash_migration, ActivityService},
     addons::AddonService,
     assets::{AlternativeAssetService, AssetClassificationService, AssetService},
     events::DomainEvent,
@@ -27,6 +27,7 @@ use wealthfolio_core::{
         income::IncomeService,
         net_worth::NetWorthService,
         performance::PerformanceService,
+        recalculation_gate::PortfolioRecalculationGate,
         snapshot::SnapshotService,
         valuation::ValuationService,
     },
@@ -379,6 +380,16 @@ pub async fn initialize_context(
         .with_timezone(timezone.clone())
         .with_event_sink(domain_event_sink.clone()),
     );
+    let final_cash_migration = run_final_cash_migration(
+        settings_service.as_ref(),
+        activity_repository.as_ref(),
+        account_service.as_ref(),
+        asset_service.as_ref(),
+    )
+    .await?;
+    let recalculation_gate = Arc::new(PortfolioRecalculationGate::new(
+        final_cash_migration.pending_account_ids.clone(),
+    ));
     let goal_service = Arc::new(GoalService::new(goal_repo.clone(), account_service.clone()));
     let limits_service = Arc::new(ContributionLimitService::new_with_timezone(
         fx_service.clone(),
@@ -405,7 +416,8 @@ pub async fn initialize_context(
             fx_service.clone(),
         )
         .with_event_sink(domain_event_sink.clone())
-        .with_lot_repository(lots_repository.clone()),
+        .with_lot_repository(lots_repository.clone())
+        .with_recalculation_gate(recalculation_gate.clone()),
     );
 
     let holdings_valuation_service = Arc::new(HoldingsValuationService::new_with_timezone(
@@ -423,8 +435,35 @@ pub async fn initialize_context(
             fx_service.clone(),
         )
         .with_activity_repository(activity_repository.clone(), timezone.clone())
-        .with_lot_repository(lots_repository.clone()),
+        .with_lot_repository(lots_repository.clone())
+        .with_recalculation_gate(recalculation_gate.clone()),
     );
+
+    if !final_cash_migration.pending_account_ids.is_empty() {
+        // The recalculation gate already serializes and forces full
+        // recomputation for pending accounts, so the rebuild can always run
+        // in the background instead of blocking (or failing) startup.
+        log::info!(
+            "Rebuilding {} account(s) after final-cash migration in the background",
+            final_cash_migration.pending_account_ids.len()
+        );
+        let settings_service = settings_service.clone();
+        let snapshot_service = snapshot_service.clone();
+        let valuation_service = valuation_service.clone();
+        let recalculation_gate = recalculation_gate.clone();
+        tokio::spawn(async move {
+            if let Err(error) = rebuild_pending_final_cash_accounts(
+                settings_service.as_ref(),
+                snapshot_service.as_ref(),
+                valuation_service.as_ref(),
+                recalculation_gate.as_ref(),
+            )
+            .await
+            {
+                log::warn!("Background final-cash rebuild failed: {}", error);
+            }
+        });
+    }
 
     let performance_service = Arc::new(
         PerformanceService::new_with_timezone(

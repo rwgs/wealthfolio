@@ -1,4 +1,10 @@
 {
+  "needs_review_alert": {
+    "title_one": "{{count}} actividad requiere revisión",
+    "title_other": "{{count}} actividades requieren revisión",
+    "description": "Revise el activo, el tipo y el importe final de cada transacción.",
+    "action": "Revisar"
+  },
   "activities": "Actividades",
   "add_activity": "Añadir actividad",
   "add_holdings": "Añadir posiciones",
@@ -555,6 +561,9 @@
     "available_amount": "Disponible: {{amount}}",
     "total_debit": "Débito total",
     "total_credit": "Crédito total",
+    "help_total_debit": "Efectivo final pagado, incluidas las comisiones y los impuestos.",
+    "help_total_credit": "Efectivo final recibido, después de comisiones e impuestos.",
+    "use_calculated_total": "Usar el total calculado ({{amount}})",
     "warn_buy_while_short": "Actualmente tienes una posición corta en esta acción. Usa Comprar para cubrir para reducirla; introduce una Compra normal solo después de que la posición corta esté cerrada.",
     "warn_cover_without_short": "Comprar para cubrir requiere una posición corta existente para esta acción en la cuenta seleccionada.",
     "warn_cover_quantity_excess": "Estás cubriendo {{covering}} acciones, pero la posición corta actual es de {{short}} acciones. Introduce cualquier exceso como una actividad de Compra por separado.",
@@ -602,6 +611,7 @@
     "err_amount_number": "El importe debe ser un número.",
     "err_amount_positive_number": "El importe debe ser un número positivo.",
     "err_amount_gt_zero": "El importe debe ser mayor que 0.",
+    "err_amount_non_negative": "El importe no puede ser negativo.",
     "err_enter_quantity": "Introduce una cantidad.",
     "err_quantity_number": "La cantidad debe ser un número.",
     "err_quantity_gt_zero": "La cantidad debe ser mayor que 0.",
@@ -742,7 +752,10 @@
     "warn_dates_differ_one": "Las fechas difieren en {{count}} día.",
     "warn_dates_differ_other": "Las fechas difieren en {{count}} días.",
     "approve_count_one": "Aprobar {{count}}",
-    "approve_count_other": "Aprobar {{count}}"
+    "approve_count_other": "Aprobar {{count}}",
+    "approve_missing_amount_one": "A {{count}} actividad todavía le falta el importe final de efectivo",
+    "approve_missing_amount_other": "A {{count}} actividades todavía les falta el importe final de efectivo",
+    "approve_missing_amount_description": "Introduce el importe final de efectivo correcto para cada operación vacía o con valor cero antes de aprobarla."
   },
   "table": {
     "cash": "Efectivo",

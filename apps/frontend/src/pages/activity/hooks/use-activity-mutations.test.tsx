@@ -86,7 +86,10 @@ describe("useActivityMutations", () => {
       } as any);
     });
 
-    expect(adapterMocks.updateActivity).toHaveBeenCalledWith(
+    const payload = adapterMocks.updateActivity.mock.calls[0][0];
+    expect(payload).not.toHaveProperty("needsReview");
+    expect(payload).not.toHaveProperty("status");
+    expect(payload).toEqual(
       expect.objectContaining({
         asset: expect.objectContaining({
           id: "asset-tsla",

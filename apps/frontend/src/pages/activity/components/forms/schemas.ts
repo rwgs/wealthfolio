@@ -126,6 +126,7 @@ export const tradeActivitySchema = baseActivitySchema.extend({
       invalid_type_error: "Unit price must be a number.",
     })
     .positive(),
+  amount: z.coerce.number().min(0).optional(),
   fee: z.coerce
     .number({
       required_error: "Please enter a valid fee.",
@@ -162,7 +163,7 @@ export const cashActivitySchema = baseActivitySchema.extend({
       required_error: "Please enter a valid amount.",
       invalid_type_error: "Amount must be a positive number.",
     })
-    .positive(),
+    .min(0),
   fee: z.coerce
     .number({
       invalid_type_error: "Fee must be a positive number.",
@@ -186,7 +187,7 @@ export const incomeActivitySchema = baseActivitySchema.extend({
       required_error: "Please enter a valid amount.",
       invalid_type_error: "Amount must be a positive number.",
     })
-    .positive(),
+    .min(0),
   fee: z.coerce
     .number({
       invalid_type_error: "Fee must be a positive number.",
@@ -224,7 +225,7 @@ export const creditActivitySchema = baseActivitySchema.extend({
       required_error: "Please enter a valid amount.",
       invalid_type_error: "Amount must be a positive number.",
     })
-    .positive(),
+    .min(0),
   fee: z.coerce
     .number({
       invalid_type_error: "Fee must be a positive number.",

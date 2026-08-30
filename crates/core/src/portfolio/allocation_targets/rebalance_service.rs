@@ -55,20 +55,6 @@ impl RebalanceService {
         }
     }
 
-    fn currency_fraction_digits(currency: &str) -> u32 {
-        match currency.to_ascii_uppercase().as_str() {
-            "BIF" | "CLP" | "DJF" | "GNF" | "ISK" | "JPY" | "KMF" | "KRW" | "PYG" | "RWF"
-            | "UGX" | "VND" | "VUV" | "XAF" | "XOF" | "XPF" => 0,
-            "BHD" | "IQD" | "JOD" | "KWD" | "LYD" | "OMR" | "TND" => 3,
-            "CLF" => 4,
-            _ => 2,
-        }
-    }
-
-    fn currency_rounding_tolerance(currency: &str) -> Decimal {
-        Decimal::ONE / Decimal::from(10_i64.pow(Self::currency_fraction_digits(currency)))
-    }
-
     fn asset_key(holding: &crate::portfolio::holdings::Holding) -> String {
         holding
             .instrument
@@ -453,7 +439,7 @@ impl RebalanceServiceTrait for RebalanceService {
 
         let available_cash = if input.available_cash > cash_in_scope {
             let overage = input.available_cash - cash_in_scope;
-            if overage <= Self::currency_rounding_tolerance(&input.base_currency) {
+            if overage <= crate::fx::currency::currency_minor_unit(&input.base_currency) {
                 cash_in_scope
             } else {
                 return Err(CoreError::Validation(
