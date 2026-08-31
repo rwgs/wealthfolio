@@ -62,8 +62,10 @@
     "at_risk": "EN RIESGO",
     "months_left_one": "QUEDA {{count}} MES",
     "months_left_other": "QUEDAN {{count}} MESES",
+    "months_left_many": "QUEDAN {{count}} MESES",
     "years_left_one": "QUEDA {{count}} AÑO",
     "years_left_other": "QUEDAN {{count}} AÑOS",
+    "years_left_many": "QUEDAN {{count}} AÑOS",
     "years_months_left": "QUEDAN {{years}}A {{months}}M",
     "quote_car": "para el camino por delante",
     "quote_home": "un lugar al que volver",
@@ -80,6 +82,7 @@
     "create_first_goal": "Crea tu primer objetivo",
     "archived_count_one": "Archivado ({{count}})",
     "archived_count_other": "Archivados ({{count}})",
+    "archived_count_many": "Archivados ({{count}})",
     "stat_saved": "AHORRADO",
     "stat_target": "OBJETIVO",
     "stat_overall": "GLOBAL",
@@ -109,7 +112,8 @@
       "at_risk": "En riesgo",
       "never_reaches_fi": "Nunca alcanza la IF",
       "years_late_one": "{{count}} año tarde",
-      "years_late_other": "{{count}} años tarde"
+      "years_late_other": "{{count}} años tarde",
+      "years_late_many": "{{count}} años tarde"
     },
     "verdict": {
       "age": "edad {{age}}",
@@ -129,8 +133,10 @@
       "fi_at_prefix": "Alcanzarás la independencia financiera a los",
       "years_after_one": "{{count}} año después de",
       "years_after_other": "{{count}} años después de",
+      "years_after_many": "{{count}} años después de",
       "years_before_one": "{{count}} año antes de",
       "years_before_other": "{{count}} años antes de",
+      "years_before_many": "{{count}} años antes de",
       "your_goal_of": "tu objetivo de {{age}}.",
       "right_on_goal": "justo en tu objetivo de {{age}}.",
       "not_reachable_prefix": "No alcanzable para los",
@@ -575,6 +581,7 @@
     "no_active_accounts": "No se encontraron cuentas activas.",
     "accounts_exceed_share_one": "{{count}} cuenta supera la participación disponible. Usa el valor máximo resaltado antes de guardar.",
     "accounts_exceed_share_other": "{{count}} cuentas superan la participación disponible. Usa el valor máximo resaltado antes de guardar.",
+    "accounts_exceed_share_many": "{{count}} cuentas superan la participación disponible. Usa el valor máximo resaltado antes de guardar.",
     "no_accounts_assigned": "No hay cuentas asignadas.",
     "this_goal": "Este objetivo",
     "free": "Libre",
@@ -742,6 +749,7 @@
       "not_reachable": "no alcanzable",
       "years_late_one": "{{count}} año tarde",
       "years_late_other": "{{count}} años tarde",
+      "years_late_many": "{{count}} años tarde",
       "projected_run_short": "se prevé que se quede corto",
       "short_at_retirement": "corto en la jubilación",
       "ahead_of_target": "por delante del objetivo"
@@ -761,7 +769,8 @@
       "paths_count": "{{count}} trayectorias",
       "not_run": "no ejecutado",
       "paths_count_one": "{{count}} trayectoria",
-      "paths_count_other": "{{count}} trayectorias"
+      "paths_count_other": "{{count}} trayectorias",
+      "paths_count_many": "{{count}} trayectorias"
     },
     "results": {
       "base_plan": "Plan base",
@@ -785,6 +794,7 @@
       "unchanged": "sin cambios",
       "years_short_one": "{{count}} año",
       "years_short_other": "{{count}} años",
+      "years_short_many": "{{count}} años",
       "runs_short_at": "Se queda corto a los {{age}}",
       "gap_starts_at": "El déficit comienza a los {{age}}",
       "gap": "Déficit",
@@ -809,7 +819,8 @@
       "extra_gap": "Déficit extra",
       "money_left": "Dinero restante",
       "eyebrow_with_count_one": "¿Qué podría romper este plan? · {{count}} escenario",
-      "eyebrow_with_count_other": "¿Qué podría romper este plan? · {{count}} escenarios"
+      "eyebrow_with_count_other": "¿Qué podría romper este plan? · {{count}} escenarios",
+      "eyebrow_with_count_many": "¿Qué podría romper este plan? · {{count}} escenarios"
     },
     "montecarlo": {
       "eyebrow": "Trayectorias de mercado",
@@ -844,7 +855,8 @@
       "retire": "jubilación",
       "goal": "objetivo",
       "market_paths_count_one": "{{count}} trayectoria de mercado",
-      "market_paths_count_other": "{{count}} trayectorias de mercado"
+      "market_paths_count_other": "{{count}} trayectorias de mercado",
+      "market_paths_count_many": "{{count}} trayectorias de mercado"
     },
     "moves": {
       "eyebrow": "¿Qué cambia más el plan?",
