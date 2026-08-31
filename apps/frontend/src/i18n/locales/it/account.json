@@ -15,7 +15,6 @@
   "type_securities": "Titoli",
   "type_bank": "Banca",
   "type_cryptocurrency": "Criptovaluta",
-  "type_many": "Altro",
   "type_other": "Altro",
   "group_taxable": "Tassabile",
   "group_tax_deferred": "Tassazione differita",

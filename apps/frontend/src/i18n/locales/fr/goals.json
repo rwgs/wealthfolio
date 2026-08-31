@@ -62,8 +62,10 @@
     "at_risk": "À RISQUE",
     "months_left_one": "{{count}} MOIS RESTANT",
     "months_left_other": "{{count}} MOIS RESTANTS",
+    "months_left_many": "{{count}} MOIS RESTANTS",
     "years_left_one": "{{count}} AN RESTANT",
     "years_left_other": "{{count}} ANS RESTANTS",
+    "years_left_many": "{{count}} ANS RESTANTS",
     "years_months_left": "{{years}} A {{months}} M RESTANTS",
     "quote_car": "pour la route à venir",
     "quote_home": "un endroit où rentrer",
@@ -80,6 +82,7 @@
     "create_first_goal": "Créer votre premier objectif",
     "archived_count_one": "Archivé ({{count}})",
     "archived_count_other": "Archivés ({{count}})",
+    "archived_count_many": "Archivés ({{count}})",
     "stat_saved": "ÉPARGNÉ",
     "stat_target": "OBJECTIF",
     "stat_overall": "GLOBAL",
@@ -109,7 +112,8 @@
       "at_risk": "À risque",
       "never_reaches_fi": "N’atteint jamais l’IF",
       "years_late_one": "{{count}} an de retard",
-      "years_late_other": "{{count}} ans de retard"
+      "years_late_other": "{{count}} ans de retard",
+      "years_late_many": "{{count}} ans de retard"
     },
     "verdict": {
       "age": "âge {{age}}",
@@ -129,8 +133,10 @@
       "fi_at_prefix": "Vous atteindrez l’indépendance financière à",
       "years_after_one": "{{count}} an après",
       "years_after_other": "{{count}} ans après",
+      "years_after_many": "{{count}} ans après",
       "years_before_one": "{{count}} an avant",
       "years_before_other": "{{count}} ans avant",
+      "years_before_many": "{{count}} ans avant",
       "your_goal_of": "votre objectif de {{age}} ans.",
       "right_on_goal": "pile sur votre objectif de {{age}} ans.",
       "not_reachable_prefix": "Inatteignable avant",
@@ -575,6 +581,7 @@
     "no_active_accounts": "Aucun compte actif trouvé.",
     "accounts_exceed_share_one": "{{count}} compte dépasse la part disponible. Utilisez la valeur maximale mise en évidence avant d'enregistrer.",
     "accounts_exceed_share_other": "{{count}} comptes dépassent la part disponible. Utilisez la valeur maximale mise en évidence avant d'enregistrer.",
+    "accounts_exceed_share_many": "{{count}} comptes dépassent la part disponible. Utilisez la valeur maximale mise en évidence avant d'enregistrer.",
     "no_accounts_assigned": "Aucun compte attribué.",
     "this_goal": "Cet objectif",
     "free": "Libre",
@@ -742,6 +749,7 @@
       "not_reachable": "non atteignable",
       "years_late_one": "{{count}} an de retard",
       "years_late_other": "{{count}} ans de retard",
+      "years_late_many": "{{count}} ans de retard",
       "projected_run_short": "risque de manquer de fonds",
       "short_at_retirement": "insuffisant à la retraite",
       "ahead_of_target": "en avance sur l'objectif"
@@ -761,7 +769,8 @@
       "paths_count": "{{count}} trajectoires",
       "not_run": "non exécuté",
       "paths_count_one": "{{count}} trajectoire",
-      "paths_count_other": "{{count}} trajectoires"
+      "paths_count_other": "{{count}} trajectoires",
+      "paths_count_many": "{{count}} trajectoires"
     },
     "results": {
       "base_plan": "Plan de base",
@@ -785,6 +794,7 @@
       "unchanged": "inchangé",
       "years_short_one": "{{count}} an",
       "years_short_other": "{{count}} ans",
+      "years_short_many": "{{count}} ans",
       "runs_short_at": "Manque de fonds à {{age}}",
       "gap_starts_at": "L'écart commence à {{age}}",
       "gap": "Écart",
@@ -809,7 +819,8 @@
       "extra_gap": "Écart supplémentaire",
       "money_left": "Argent restant",
       "eyebrow_with_count_one": "Qu'est-ce qui pourrait compromettre ce plan ? · {{count}} scénario",
-      "eyebrow_with_count_other": "Qu'est-ce qui pourrait compromettre ce plan ? · {{count}} scénarios"
+      "eyebrow_with_count_other": "Qu'est-ce qui pourrait compromettre ce plan ? · {{count}} scénarios",
+      "eyebrow_with_count_many": "Qu'est-ce qui pourrait compromettre ce plan ? · {{count}} scénarios"
     },
     "montecarlo": {
       "eyebrow": "Trajectoires de marché",
@@ -844,7 +855,8 @@
       "retire": "retraite",
       "goal": "objectif",
       "market_paths_count_one": "{{count}} trajectoire de marché",
-      "market_paths_count_other": "{{count}} trajectoires de marché"
+      "market_paths_count_other": "{{count}} trajectoires de marché",
+      "market_paths_count_many": "{{count}} trajectoires de marché"
     },
     "moves": {
       "eyebrow": "Qu'est-ce qui change le plus le plan ?",
