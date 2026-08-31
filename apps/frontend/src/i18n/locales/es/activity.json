@@ -324,6 +324,7 @@
   "suppressed": {
     "summary_one": "{{count}} actividad del bróker eliminada se mantiene fuera de las próximas sincronizaciones.",
     "summary_other": "{{count}} actividades del bróker eliminadas se mantienen fuera de las próximas sincronizaciones.",
+    "summary_many": "{{count}} actividades del bróker eliminadas se mantienen fuera de las próximas sincronizaciones.",
     "review": "Revisar",
     "title": "Actividades del bróker eliminadas",
     "description": "Tu bróker sigue informando estos registros, por lo que cada sincronización volvería a añadirlos. Permanecerán excluidos hasta que los restaures.",
@@ -332,6 +333,7 @@
     "restore_all": "Restaurar todas",
     "restored_one": "{{count}} actividad restaurada. La próxima sincronización volverá a actualizarla.",
     "restored_other": "{{count}} actividades restauradas. La próxima sincronización volverá a actualizarlas.",
+    "restored_many": "{{count}} actividades restauradas. La próxima sincronización volverá a actualizarlas.",
     "restore_failed": "No se pudo restaurar"
   },
   "form_renderer": {

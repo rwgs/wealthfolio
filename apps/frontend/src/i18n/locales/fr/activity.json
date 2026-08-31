@@ -324,6 +324,7 @@
   "suppressed": {
     "summary_one": "{{count}} activité de courtier supprimée est exclue des prochaines synchronisations.",
     "summary_other": "{{count}} activités de courtier supprimées sont exclues des prochaines synchronisations.",
+    "summary_many": "{{count}} activités de courtier supprimées sont exclues des prochaines synchronisations.",
     "review": "Examiner",
     "title": "Activités de courtier supprimées",
     "description": "Votre courtier signale toujours ces enregistrements, donc chaque synchronisation les rajouterait. Ils restent exclus jusqu'à ce que vous les restauriez.",
@@ -332,6 +333,7 @@
     "restore_all": "Tout restaurer",
     "restored_one": "{{count}} activité restaurée. La prochaine synchronisation la mettra à jour.",
     "restored_other": "{{count}} activités restaurées. La prochaine synchronisation les mettra à jour.",
+    "restored_many": "{{count}} activités restaurées. La prochaine synchronisation les mettra à jour.",
     "restore_failed": "Restauration impossible"
   },
   "form_renderer": {
