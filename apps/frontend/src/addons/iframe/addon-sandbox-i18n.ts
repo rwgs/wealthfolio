@@ -8,8 +8,10 @@ import deUi from "@/i18n/locales/de/ui.json";
 import enUi from "@/i18n/locales/en/ui.json";
 import esUi from "@/i18n/locales/es/ui.json";
 import frUi from "@/i18n/locales/fr/ui.json";
+import itUi from "@/i18n/locales/it/ui.json";
 import jaUi from "@/i18n/locales/ja/ui.json";
 import koUi from "@/i18n/locales/ko/ui.json";
+import ptUi from "@/i18n/locales/pt/ui.json";
 import zhUi from "@/i18n/locales/zh/ui.json";
 
 // The sandbox iframe renders `@wealthfolio/ui` components that call
@@ -30,8 +32,10 @@ const resources: Record<LocaleCode, { ui: Record<string, unknown> }> = {
   en: { ui: enUi },
   es: { ui: esUi },
   fr: { ui: frUi },
+  it: { ui: itUi },
   ja: { ui: jaUi },
   ko: { ui: koUi },
+  pt: { ui: ptUi },
   zh: { ui: zhUi },
 };
 

@@ -1460,9 +1460,12 @@
       "germany": "Deutschland",
       "spain": "Spanien",
       "mexico": "Mexiko",
+      "brazil": "Brasilien",
+      "portugal": "Portugal",
       "china": "China",
       "japan": "Japan",
-      "southKorea": "Südkorea"
+      "southKorea": "Südkorea",
+      "italy": "Italien"
     }
   },
   "appearance_navigation_title": "Navigation",

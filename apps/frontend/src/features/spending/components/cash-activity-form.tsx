@@ -84,7 +84,7 @@ function buildFormSchema(t: TFunction) {
       "CREDIT",
     ]),
     activityDate: z.date({ required_error: t("spending:cashForm.pickDate") }),
-    amount: z.coerce.number().min(0.01, { message: t("spending:cashForm.amountPositive") }),
+    amount: z.coerce.number().min(0, { message: t("spending:cashForm.amountNonNegative") }),
     notes: z.string().optional(),
     /** "<taxonomyId>:<categoryId>" or "" */
     category: z.string().optional(),
@@ -226,7 +226,7 @@ export function CashActivityForm({
       accountId: activity?.accountId ?? "",
       activityType: (activity?.activityType as FormValues["activityType"]) ?? "WITHDRAWAL",
       activityDate: activity?.activityDate ? new Date(activity.activityDate) : new Date(),
-      amount: activity?.amount ? Math.abs(parseFloat(activity.amount)) : 0,
+      amount: activity?.amount != null ? Math.abs(parseFloat(activity.amount)) : 0,
       notes: activity?.notes ?? "",
       category:
         activity?.categoryTaxonomyId && activity?.categoryId
@@ -241,7 +241,7 @@ export function CashActivityForm({
         accountId: activity?.accountId ?? spendingAccounts[0]?.id ?? "",
         activityType: (activity?.activityType as FormValues["activityType"]) ?? "WITHDRAWAL",
         activityDate: activity?.activityDate ? new Date(activity.activityDate) : new Date(),
-        amount: activity?.amount ? Math.abs(parseFloat(activity.amount)) : 0,
+        amount: activity?.amount != null ? Math.abs(parseFloat(activity.amount)) : 0,
         notes: activity?.notes ?? "",
         category:
           activity?.categoryTaxonomyId && activity?.categoryId

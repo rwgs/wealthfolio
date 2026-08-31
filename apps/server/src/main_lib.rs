@@ -17,7 +17,10 @@ use wealthfolio_connect::{
 use wealthfolio_core::addons::{AddonService, AddonServiceTrait};
 use wealthfolio_core::{
     accounts::{AccountService, AccountServiceTrait},
-    activities::{ActivityService as CoreActivityService, ActivityServiceTrait},
+    activities::{
+        rebuild_pending_final_cash_accounts, run_final_cash_migration,
+        ActivityService as CoreActivityService, ActivityServiceTrait,
+    },
     assets::{
         AlternativeAssetRepositoryTrait, AlternativeAssetService, AlternativeAssetServiceTrait,
         AssetClassificationService, AssetService, AssetServiceTrait,
@@ -29,6 +32,7 @@ use wealthfolio_core::{
     limits::{ContributionLimitService, ContributionLimitServiceTrait},
     portfolio::allocation::{AllocationService, AllocationServiceTrait},
     portfolio::income::{IncomeService, IncomeServiceTrait},
+    portfolio::recalculation_gate::PortfolioRecalculationGate,
     portfolio::{
         holdings::{
             holdings_valuation_service::HoldingsValuationService, HoldingsService,
@@ -406,6 +410,7 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         )?
         .with_event_sink(domain_event_sink.clone()),
     );
+    let recalculation_gate = Arc::new(PortfolioRecalculationGate::default());
     let snapshot_service = Arc::new(
         SnapshotService::new_with_timezone(
             base_currency.clone(),
@@ -417,7 +422,8 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
             fx_service.clone(),
         )
         .with_event_sink(domain_event_sink.clone())
-        .with_lot_repository(lots_repository.clone()),
+        .with_lot_repository(lots_repository.clone())
+        .with_recalculation_gate(recalculation_gate.clone()),
     );
 
     let valuation_repository = Arc::new(ValuationRepository::new(pool.clone(), writer.clone()));
@@ -430,7 +436,8 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
             fx_service.clone(),
         )
         .with_activity_repository(activity_repository.clone(), timezone.clone())
-        .with_lot_repository(lots_repository.clone()),
+        .with_lot_repository(lots_repository.clone())
+        .with_recalculation_gate(recalculation_gate.clone()),
     );
 
     let net_worth_service: Arc<dyn NetWorthServiceTrait + Send + Sync> =
@@ -558,6 +565,39 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         .with_timezone(timezone.clone())
         .with_event_sink(domain_event_sink.clone()),
     );
+    let final_cash_migration = run_final_cash_migration(
+        settings_service.as_ref(),
+        activity_repository.as_ref(),
+        account_service.as_ref(),
+        asset_service.as_ref(),
+    )
+    .await?;
+    recalculation_gate.replace_pending_accounts(final_cash_migration.pending_account_ids.clone());
+    if !final_cash_migration.pending_account_ids.is_empty() {
+        // The recalculation gate already serializes and forces full
+        // recomputation for pending accounts, so the rebuild can always run
+        // in the background instead of blocking (or failing) startup.
+        tracing::info!(
+            "Rebuilding {} account(s) after final-cash migration in the background",
+            final_cash_migration.pending_account_ids.len()
+        );
+        let settings_service = settings_service.clone();
+        let snapshot_service = snapshot_service.clone();
+        let valuation_service = valuation_service.clone();
+        let recalculation_gate = recalculation_gate.clone();
+        tokio::spawn(async move {
+            if let Err(error) = rebuild_pending_final_cash_accounts(
+                settings_service.as_ref(),
+                snapshot_service.as_ref(),
+                valuation_service.as_ref(),
+                recalculation_gate.as_ref(),
+            )
+            .await
+            {
+                tracing::warn!("Background final-cash rebuild failed: {}", error);
+            }
+        });
+    }
 
     // Spending: events + event_types
     let event_types_repo: Arc<dyn wealthfolio_spending::events::EventTypesRepositoryTrait> =

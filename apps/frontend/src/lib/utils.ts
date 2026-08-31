@@ -411,36 +411,6 @@ export function getNumericCellValue(value: unknown): string {
 }
 
 /**
- * Converts an unknown value to a finite number or undefined.
- * @param value The value to convert
- * @returns A finite number if valid, undefined otherwise
- */
-export function toFiniteNumberOrUndefined(value: unknown): number | undefined {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : undefined;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-}
-
-/**
- * Converts an unknown value to a rounded number suitable for API payloads.
- * @param value The value to convert
- * @param precision The number of decimal places (default: 6)
- * @returns A rounded number if valid, undefined otherwise
- */
-export function toPayloadNumber(value: unknown, precision = DECIMAL_PRECISION): number | undefined {
-  const parsed = toFiniteNumberOrUndefined(value);
-  if (parsed === undefined) {
-    return undefined;
-  }
-  return roundDecimal(parsed, precision);
-}
-
-/**
  * Normalize decimal string for storage: trim whitespace, remove trailing zeros.
  * Returns null for empty/invalid input. Used for storing numeric values as strings.
  */

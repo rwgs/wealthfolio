@@ -28,9 +28,12 @@ export const FORMATTING_REGIONS = [
   "DE",
   "ES",
   "MX",
+  "BR",
+  "PT",
   "CN",
   "JP",
   "KR",
+  "IT",
 ] as const;
 
 export type FormattingRegionSetting = (typeof FORMATTING_REGIONS)[number];
@@ -43,9 +46,12 @@ const FORMATTING_REGION_LOCALES: Record<Exclude<FormattingRegionSetting, "system
   DE: "de-DE",
   ES: "es-ES",
   MX: "es-MX",
+  BR: "pt-BR",
+  PT: "pt-PT",
   CN: "zh-CN",
   JP: "ja-JP",
   KR: "ko-KR",
+  IT: "it-IT",
 };
 
 export interface PercentFormatOptions {
