@@ -177,6 +177,19 @@ describe("useIntersectionObserver", () => {
       expect(lastInstance().options?.root).toBeNull();
     });
 
+    it("skips a content-growing overflow ancestor taller than the viewport", () => {
+      const pageScroller = scrollableAncestor(3000, 600);
+      const grown = scrollableAncestor(1205, 1200);
+      const sentinel = document.createElement("div");
+      grown.appendChild(sentinel);
+      pageScroller.appendChild(grown);
+
+      const { result } = renderHook(() => useIntersectionObserver(vi.fn()));
+      act(() => result.current(sentinel));
+
+      expect(lastInstance().options?.root).toBe(pageScroller);
+    });
+
     it("skips ancestors that overflow visibly even when their content is taller", () => {
       const visible = document.createElement("div");
       setScrollMetrics(visible, 800, 400);

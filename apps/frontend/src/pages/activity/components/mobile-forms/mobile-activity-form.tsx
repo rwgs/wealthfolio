@@ -795,14 +795,19 @@ export function MobileActivityForm({
         );
         const currentAssetId =
           wasAssetBackedIncome && !isAssetBackedIncome ? undefined : activity?.assetId;
+        const clearAsset = Boolean(
+          activity?.assetId && wasAssetBackedIncome && !isAssetBackedIncome,
+        );
 
         await updateActivityMutation.mutateAsync({
           id,
           ...submitData,
           currentAssetId,
+          clearAsset,
         } as NewActivityFormValues & {
           id: string;
           currentAssetId?: string;
+          clearAsset?: boolean;
         });
       } else {
         await addActivityMutation.mutateAsync(submitData);
