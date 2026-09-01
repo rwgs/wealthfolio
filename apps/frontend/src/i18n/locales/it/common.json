@@ -2,6 +2,7 @@
   "app_name": "Wealthfolio",
   "welcome": "Benvenuto",
   "loading": "Caricamento...",
+  "load_more": "Carica altro...",
   "error": "Errore",
   "success": "Operazione riuscita",
   "cancel": "Annulla",

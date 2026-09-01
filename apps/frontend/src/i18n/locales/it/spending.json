@@ -871,12 +871,7 @@
     "addTransaction": "Aggiungi transazione",
     "deselectAllVisible": "Deseleziona tutte le transazioni visibili",
     "selectAllVisible": "Seleziona tutte le transazioni visibili",
-    "nameNotes": "Nome / Note",
-    "loading": "Caricamento…",
-    "loadMore": "Carica altre ({{count}} rimanenti)",
-    "loadMore_one": "Carica altre ({{count}} rimanente)",
-    "loadMore_many": "Carica altre ({{count}} rimanenti)",
-    "loadMore_other": "Carica altre ({{count}} rimanenti)"
+    "nameNotes": "Nome / Note"
   },
   "tabContent": {
     "stageWhereLabel": "Dove sono",
