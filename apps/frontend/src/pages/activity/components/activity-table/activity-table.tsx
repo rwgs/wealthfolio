@@ -53,6 +53,7 @@ import {
 } from "@wealthfolio/ui/components/ui/table";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { InfiniteScrollTrigger } from "@/components/infinite-scroll-trigger";
 import { useActivityMutations } from "../../hooks/use-activity-mutations";
 import { ActivityOperations } from "../activity-operations";
 import { ActivityTypeBadge } from "../activity-type-badge";
@@ -69,6 +70,11 @@ interface ActivityTableProps {
   filtersActive?: boolean;
   onAdd?: () => void;
   onClearFilters?: () => void;
+  onLoadMore?: () => void;
+  hasNextPage?: boolean;
+  isFetching?: boolean;
+  isFetchingNextPage?: boolean;
+  hasLoadMoreError?: boolean;
 }
 
 export const ActivityTable = ({
@@ -83,6 +89,11 @@ export const ActivityTable = ({
   filtersActive = false,
   onAdd,
   onClearFilters,
+  onLoadMore,
+  hasNextPage = false,
+  isFetching,
+  isFetchingNextPage = false,
+  hasLoadMoreError = false,
 }: ActivityTableProps) => {
   const formatting = useAmountFormatting();
   const numberFormatting = useNumberFormatting();
@@ -687,6 +698,15 @@ export const ActivityTable = ({
             })}
           </TableBody>
         </Table>
+        {onLoadMore && (
+          <InfiniteScrollTrigger
+            onLoadMore={onLoadMore}
+            hasNextPage={hasNextPage}
+            isFetching={isFetching ?? isFetchingNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            hasLoadMoreError={hasLoadMoreError}
+          />
+        )}
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ import {
 import { Card } from "@wealthfolio/ui/components/ui/card";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { InfiniteScrollTrigger } from "@/components/infinite-scroll-trigger";
 import { ActivityOperations } from "../activity-operations";
 import { ActivityTypeBadge } from "../activity-type-badge";
 
@@ -43,6 +44,11 @@ interface ActivityTableMobileProps {
   filtersActive?: boolean;
   onAdd?: () => void;
   onClearFilters?: () => void;
+  onLoadMore?: () => void;
+  hasNextPage?: boolean;
+  isFetching?: boolean;
+  isFetchingNextPage?: boolean;
+  hasLoadMoreError?: boolean;
 }
 
 export const ActivityTableMobile = ({
@@ -57,6 +63,11 @@ export const ActivityTableMobile = ({
   filtersActive = false,
   onAdd,
   onClearFilters,
+  onLoadMore,
+  hasNextPage = false,
+  isFetching,
+  isFetchingNextPage = false,
+  hasLoadMoreError = false,
 }: ActivityTableMobileProps) => {
   const formatting = useAmountFormatting();
   const numberFormatting = useNumberFormatting();
@@ -356,6 +367,15 @@ export const ActivityTableMobile = ({
           </Card>
         );
       })}
+      {onLoadMore && (
+        <InfiniteScrollTrigger
+          onLoadMore={onLoadMore}
+          hasNextPage={hasNextPage}
+          isFetching={isFetching ?? isFetchingNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          hasLoadMoreError={hasLoadMoreError}
+        />
+      )}
     </div>
   );
 };
