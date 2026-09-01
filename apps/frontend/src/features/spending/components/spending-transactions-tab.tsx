@@ -18,6 +18,7 @@ import { generateId } from "@/lib/id";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useIsMobileViewport } from "@/hooks/use-platform";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { InfiniteScrollTrigger } from "@/components/infinite-scroll-trigger";
 import { useTaxonomy } from "@/hooks/use-taxonomies";
 import { QueryKeys } from "@/lib/query-keys";
 import { formatDateISO } from "@/lib/utils";
@@ -478,6 +479,7 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
       isLoading,
       isFetching,
       isFetchingNextPage,
+      isFetchNextPageError,
       isError,
       error,
       hasNextPage,
@@ -838,23 +840,16 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
     const isRefreshing = isFetching && !isFetchingNextPage;
     const isMobile = useIsMobileViewport();
 
-    const loadMoreButton = hasNextPage ? (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => fetchNextPage()}
-        disabled={isFetchingNextPage}
-      >
-        {isFetchingNextPage ? (
-          <>
-            <Icons.Spinner className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-            {t("spending:txTab.loading")}
-          </>
-        ) : (
-          t("spending:txTab.loadMore", { count: totalCount - rows.length })
-        )}
-      </Button>
-    ) : null;
+    const loadMoreTrigger =
+      hasNextPage || isFetchingNextPage ? (
+        <InfiniteScrollTrigger
+          onLoadMore={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetching={isFetching}
+          isFetchingNextPage={isFetchingNextPage}
+          hasLoadMoreError={isFetchNextPageError}
+        />
+      ) : null;
 
     const renderRows = () =>
       rows.map((r) => {
@@ -952,7 +947,7 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
             <Skeleton className="h-12" />
             <Skeleton className="h-12" />
           </div>
-        ) : isError ? (
+        ) : isError && !isFetchNextPageError ? (
           <EmptyPlaceholder>
             <EmptyPlaceholder.Icon name="AlertTriangle" />
             <EmptyPlaceholder.Title>{t("spending:txTab.loadErrorTitle")}</EmptyPlaceholder.Title>
@@ -1000,7 +995,7 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
               </div>
             )}
             {renderRows()}
-            {loadMoreButton && <div className="flex justify-center pt-1">{loadMoreButton}</div>}
+            {loadMoreTrigger && <div className="flex justify-center pt-1">{loadMoreTrigger}</div>}
           </div>
         ) : (
           <div className="rounded-md border">
@@ -1037,9 +1032,9 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
               <TableBody>{renderRows()}</TableBody>
             </Table>
 
-            {loadMoreButton && (
+            {loadMoreTrigger && (
               <div className="border-border flex items-center justify-center border-t p-3">
-                {loadMoreButton}
+                {loadMoreTrigger}
               </div>
             )}
           </div>
