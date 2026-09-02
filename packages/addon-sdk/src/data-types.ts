@@ -322,6 +322,7 @@ export interface ActivityUpdate {
   subtype?: string | null;
   activityDate: string | Date;
   sourceGroupId?: string;
+  /** Omit to preserve the current asset; pass an empty object to clear it. */
   asset?: AssetResolutionInput;
   /** @deprecated Use asset. */
   symbol?: AssetResolutionInput;

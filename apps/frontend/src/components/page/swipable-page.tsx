@@ -20,6 +20,7 @@ interface SwipablePageProps {
   onViewChange?: (view: string) => void;
   className?: string;
   contentClassName?: string;
+  desktopContentClassName?: string;
   withPadding?: boolean;
   withMobileNavOffset?: boolean;
   title?: string;
@@ -156,6 +157,7 @@ export function SwipablePage({
   onViewChange,
   className,
   contentClassName,
+  desktopContentClassName,
   withPadding = true,
   withMobileNavOffset = true,
   title,
@@ -310,6 +312,7 @@ export function SwipablePage({
               className={cn(
                 "relative grow overflow-y-auto pt-8 md:pt-2",
                 withPadding && "px-2 pb-2 lg:px-4 lg:pb-4",
+                desktopContentClassName,
               )}
             >
               {views.find((v) => v.value === currentView)?.content}

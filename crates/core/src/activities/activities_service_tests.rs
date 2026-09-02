@@ -1466,10 +1466,12 @@ mod tests {
                 .iter_mut()
                 .find(|activity| activity.id == activity_update.id)
                 .ok_or_else(|| Error::Unexpected("Activity not found".to_string()))?;
-            let asset_id = activity_update.get_symbol_id().map(|s| s.to_string());
+            let asset_id_patch = activity_update.asset.as_ref().map(|asset| asset.id.clone());
 
             existing.account_id = activity_update.account_id;
-            existing.asset_id = asset_id;
+            if let Some(asset_id) = asset_id_patch {
+                existing.asset_id = asset_id;
+            }
             existing.activity_type = activity_update.activity_type;
             existing.activity_date = parse_test_activity_datetime(&activity_update.activity_date);
             existing.subtype = match activity_update.subtype {
@@ -5450,7 +5452,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_bulk_update_preserves_existing_asset_backed_subtype_when_omitted() {
+    async fn test_bulk_update_preserves_existing_asset_and_subtype_when_omitted() {
         let account_service = Arc::new(MockAccountService::new());
         let asset_service = Arc::new(MockAssetService::new());
         let fx_service = Arc::new(MockFxService::new());
@@ -5482,15 +5484,7 @@ mod tests {
             quote_service,
         );
 
-        let mut update = create_test_activity_update(
-            "staking-1",
-            "acc-1",
-            Some(AssetResolutionInput {
-                id: Some("ETH".to_string()),
-                ..Default::default()
-            }),
-            "USD",
-        );
+        let mut update = create_test_activity_update("staking-1", "acc-1", None, "USD");
         update.activity_type = "INTEREST".to_string();
         update.subtype = None;
         update.quantity = None;
@@ -5508,9 +5502,60 @@ mod tests {
 
         assert!(result.errors.is_empty());
         assert_eq!(result.updated.len(), 1);
+        assert_eq!(result.updated[0].asset_id.as_deref(), Some("ETH"));
         assert_eq!(result.updated[0].subtype.as_deref(), Some("STAKING_REWARD"));
         assert_eq!(result.updated[0].quantity, Some(dec!(1)));
         assert_eq!(result.updated[0].unit_price, Some(dec!(100)));
+    }
+
+    #[tokio::test]
+    async fn test_update_requires_explicit_clear_and_rejects_clear_for_required_asset() {
+        let account_service = Arc::new(MockAccountService::new());
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        account_service.add_account(create_test_account("acc-1", "USD"));
+
+        let mut existing = create_stored_activity("adjustment-1", "acc-1", Some("AAPL"));
+        existing.activity_type = "ADJUSTMENT".to_string();
+        existing.subtype = Some("CASH_SWEEP".to_string());
+        activity_repository.add_activity(existing);
+
+        let activity_service = ActivityService::new(
+            activity_repository,
+            account_service,
+            Arc::new(MockAssetService::new()),
+            Arc::new(MockFxService::new()),
+            Arc::new(MockQuoteService),
+        );
+
+        let mut clear = create_test_activity_update(
+            "adjustment-1",
+            "acc-1",
+            Some(AssetResolutionInput::default()),
+            "USD",
+        );
+        clear.activity_type = "ADJUSTMENT".to_string();
+        clear.subtype = Some("CASH_SWEEP".to_string());
+        clear.quantity = Some(None);
+        clear.unit_price = Some(None);
+        clear.amount = Some(Some(dec!(25)));
+
+        let cleared = activity_service
+            .update_activity(clear)
+            .await
+            .expect("optional adjustment asset should clear explicitly");
+        assert_eq!(cleared.asset_id, None);
+
+        let required_clear = create_test_activity_update(
+            "adjustment-1",
+            "acc-1",
+            Some(AssetResolutionInput::default()),
+            "USD",
+        );
+        let error = activity_service
+            .update_activity(required_clear)
+            .await
+            .expect_err("BUY must reject an explicit asset clear");
+        assert!(error.to_string().contains("asset_id or symbol"));
     }
 
     #[tokio::test]
@@ -6277,7 +6322,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_sync_prepare_keeps_incomplete_valid_asset_backed_subtype_for_review() {
+    async fn test_sync_prepare_preserves_incomplete_asset_backed_subtype_for_review() {
         let account_service = Arc::new(MockAccountService::new());
         let asset_service = Arc::new(MockAssetService::new());
         let fx_service = Arc::new(MockFxService::new());
@@ -6329,11 +6374,82 @@ mod tests {
         assert_eq!(result.prepared.len(), 1);
         let prepared = &result.prepared[0].activity;
         assert_eq!(prepared.activity_type, "INTEREST");
-        assert_eq!(prepared.subtype, None);
+        assert_eq!(prepared.subtype.as_deref(), Some("STAKING_REWARD"));
         assert_eq!(prepared.amount, Some(dec!(25)));
         assert_eq!(prepared.quantity, None);
         assert_eq!(prepared.needs_review, Some(true));
         assert_eq!(prepared.status, Some(ActivityStatus::Draft));
+    }
+
+    #[tokio::test]
+    async fn test_sync_prepare_preserves_zero_value_staking_reward_subtype_for_review() {
+        let account_service = Arc::new(MockAccountService::new());
+        let asset_service = Arc::new(MockAssetService::new());
+        let fx_service = Arc::new(MockFxService::new());
+        let activity_repository = Arc::new(MockActivityRepository::new());
+
+        let account = create_test_account("acc-1", "CAD");
+        account_service.add_account(account.clone());
+        asset_service.add_asset(create_test_asset_with_instrument(
+            "SOL",
+            "SOL",
+            None,
+            Some(InstrumentType::Crypto),
+            "CAD",
+        ));
+
+        let activity_service = ActivityService::new(
+            activity_repository,
+            account_service,
+            asset_service,
+            fx_service,
+            Arc::new(MockQuoteService),
+        );
+
+        let result = activity_service
+            .prepare_activities_for_sync(
+                vec![NewActivity {
+                    id: Some("activity-staking-sol".to_string()),
+                    account_id: "acc-1".to_string(),
+                    asset: Some(AssetResolutionInput {
+                        id: Some("SOL".to_string()),
+                        ..Default::default()
+                    }),
+                    activity_type: "INTEREST".to_string(),
+                    subtype: Some("STAKING_REWARD".to_string()),
+                    activity_date: "2024-06-04".to_string(),
+                    quantity: Some(dec!(0.000000329)),
+                    unit_price: Some(dec!(0)),
+                    currency: "CAD".to_string(),
+                    fee: Some(dec!(0)),
+                    tax: None,
+                    amount: Some(dec!(0)),
+                    status: None,
+                    notes: Some("SOL Staking Reward".to_string()),
+                    fx_rate: None,
+                    metadata: None,
+                    needs_review: Some(false),
+                    source_system: Some("SNAPTRADE".to_string()),
+                    source_record_id: Some("c243110e-9bac-581d-b2d7-0c490ee06870".to_string()),
+                    source_group_id: None,
+                    idempotency_key: None,
+                    import_run_id: None,
+                }],
+                &account,
+            )
+            .await
+            .expect("sync preparation should keep zero-value staking rewards for review");
+
+        assert!(result.errors.is_empty());
+        assert_eq!(result.prepared.len(), 1);
+        let prepared = &result.prepared[0];
+        assert_eq!(prepared.resolved_asset_id.as_deref(), Some("SOL"));
+        assert_eq!(prepared.activity.subtype.as_deref(), Some("STAKING_REWARD"));
+        assert_eq!(prepared.activity.quantity, Some(dec!(0.000000329)));
+        assert_eq!(prepared.activity.unit_price, Some(dec!(0)));
+        assert_eq!(prepared.activity.amount, Some(dec!(0)));
+        assert_eq!(prepared.activity.needs_review, Some(true));
+        assert_eq!(prepared.activity.status, Some(ActivityStatus::Draft));
     }
 
     #[tokio::test]
@@ -6392,7 +6508,7 @@ mod tests {
         assert_eq!(result.prepared.len(), 1);
         let prepared = &result.prepared[0];
         assert_eq!(prepared.resolved_asset_id, None);
-        assert_eq!(prepared.activity.subtype, None);
+        assert_eq!(prepared.activity.subtype.as_deref(), Some("STAKING_REWARD"));
         assert_eq!(prepared.activity.amount, Some(dec!(25.00)));
         assert_eq!(prepared.activity.needs_review, Some(true));
         assert_eq!(prepared.activity.status, Some(ActivityStatus::Draft));
@@ -7160,6 +7276,98 @@ mod tests {
             created.asset_id, None,
             "DEPOSIT should have no asset_id (cash activities have no asset in v2)"
         );
+    }
+
+    #[tokio::test]
+    async fn test_cash_adjustment_without_asset_can_be_saved() {
+        let account_service = Arc::new(MockAccountService::new());
+        let asset_service = Arc::new(MockAssetService::new());
+        let fx_service = Arc::new(MockFxService::new());
+        let activity_repository = Arc::new(MockActivityRepository::new());
+
+        account_service.add_account(create_test_account("acc-1", "USD"));
+        let activity_service = ActivityService::new(
+            activity_repository,
+            account_service,
+            asset_service,
+            fx_service,
+            Arc::new(MockQuoteService),
+        );
+
+        let created = activity_service
+            .create_activity(NewActivity {
+                id: Some("cash-adjustment".to_string()),
+                account_id: "acc-1".to_string(),
+                asset: None,
+                activity_type: "ADJUSTMENT".to_string(),
+                subtype: Some("CASH_SWEEP".to_string()),
+                activity_date: "2024-01-15".to_string(),
+                quantity: None,
+                unit_price: None,
+                currency: "USD".to_string(),
+                fee: None,
+                tax: None,
+                amount: Some(Decimal::ZERO),
+                status: None,
+                notes: None,
+                fx_rate: None,
+                metadata: None,
+                needs_review: None,
+                source_system: None,
+                source_record_id: None,
+                source_group_id: None,
+                idempotency_key: None,
+                import_run_id: None,
+            })
+            .await
+            .expect("cash-style adjustments should not require an asset");
+
+        assert_eq!(created.asset_id, None);
+        assert_eq!(created.subtype.as_deref(), Some("CASH_SWEEP"));
+        assert_eq!(created.amount, Some(Decimal::ZERO));
+    }
+
+    #[tokio::test]
+    async fn test_option_expiry_adjustment_without_asset_is_rejected() {
+        let account_service = Arc::new(MockAccountService::new());
+        account_service.add_account(create_test_account("acc-1", "USD"));
+        let activity_service = ActivityService::new(
+            Arc::new(MockActivityRepository::new()),
+            account_service,
+            Arc::new(MockAssetService::new()),
+            Arc::new(MockFxService::new()),
+            Arc::new(MockQuoteService),
+        );
+
+        let error = activity_service
+            .create_activity(NewActivity {
+                id: Some("option-expiry".to_string()),
+                account_id: "acc-1".to_string(),
+                asset: None,
+                activity_type: "ADJUSTMENT".to_string(),
+                subtype: Some("OPTION_EXPIRY".to_string()),
+                activity_date: "2024-01-15".to_string(),
+                quantity: Some(Decimal::ONE),
+                unit_price: Some(Decimal::ZERO),
+                currency: "USD".to_string(),
+                fee: None,
+                tax: None,
+                amount: Some(Decimal::ZERO),
+                status: None,
+                notes: None,
+                fx_rate: None,
+                metadata: None,
+                needs_review: None,
+                source_system: None,
+                source_record_id: None,
+                source_group_id: None,
+                idempotency_key: None,
+                import_run_id: None,
+            })
+            .await
+            .expect_err("option expiry still requires an asset");
+
+        assert!(error.to_string().contains("asset_id or symbol"));
     }
 
     /// Test: Cash activity (WITHDRAWAL) has no asset_id

@@ -3,17 +3,20 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 /**
  * Find the element that actually scrolls the sentinel, to use as the
  * observer root. The scrollability check matters twice over: an
- * `overflow: auto` container that grows with its content (scrollHeight ==
- * clientHeight) must not become the root — the sentinel would always
- * intersect it and fetch every page in a loop — and with the viewport as
- * root, an intermediate scroller clips the intersection so rootMargin
- * gives no lead time. The +1 tolerates sub-pixel rounding.
+ * `overflow: auto` container that grows with its content must not become the
+ * root — the sentinel would always intersect it and fetch every page in a
+ * loop. Such containers may have a few pixels of incidental overflow, so an
+ * element taller than the viewport is also rejected. With the viewport as
+ * root, an intermediate real scroller clips the intersection so rootMargin
+ * still gives the intended lead time. The +1 tolerates sub-pixel rounding.
  */
 function findScrollContainer(node: HTMLElement): Element | null {
   for (let el = node.parentElement; el; el = el.parentElement) {
     const { overflowY } = getComputedStyle(el);
+    const extendsBeyondViewport = el.clientHeight > window.innerHeight + 1;
     if (
       (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
+      !extendsBeyondViewport &&
       el.scrollHeight > el.clientHeight + 1
     ) {
       return el;

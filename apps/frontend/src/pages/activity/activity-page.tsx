@@ -261,6 +261,11 @@ const ActivityPage = () => {
     [materializeInvestmentFilters],
   );
 
+  const handleReviewActivities = useCallback(() => {
+    setViewMode("datagrid");
+    setStatusFilter("pending");
+  }, [setStatusFilter, setViewMode]);
+
   const setInvestmentDateRange = useCallback(
     (range: DateRange | undefined) => {
       materializeInvestmentFilters({ dateRange: fromDateRange(range) });
@@ -398,7 +403,7 @@ const ActivityPage = () => {
         : source;
 
     return list
-      .filter((acc: Account) => !acc.isArchived)
+      .filter((acc: Account) => !acc.isArchived || acc.id === selectedActivity?.accountId)
       .map((account: Account) => ({
         value: account.id,
         label: account.name,
@@ -697,7 +702,7 @@ const ActivityPage = () => {
       {statusFilter !== "pending" && (
         <NeedsReviewBanner
           accountIds={effectiveInvestmentAccountIds}
-          onReview={() => setStatusFilter("pending")}
+          onReview={handleReviewActivities}
         />
       )}
       {isHealthActivityDeepLink && (
@@ -910,7 +915,12 @@ const ActivityPage = () => {
 
   return (
     <>
-      <SwipablePage views={views} defaultView="investments" persistKey="activity-page-tab" />
+      <SwipablePage
+        views={views}
+        defaultView="investments"
+        persistKey="activity-page-tab"
+        desktopContentClassName="overflow-y-visible"
+      />
       {sharedModals}
     </>
   );

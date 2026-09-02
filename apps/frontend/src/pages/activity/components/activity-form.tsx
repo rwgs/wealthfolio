@@ -72,11 +72,18 @@ export function ActivityForm({
     const base =
       effectiveSelectedType === "TRANSFER" && transferAccounts ? transferAccounts : accounts;
     if (!effectiveSelectedType) return base;
+    const currentAccountId = isEditing ? activity?.accountId : undefined;
     if (effectiveSelectedType === "TRANSFER") {
-      return base.filter(transferAllowsAccount);
+      return base.filter(
+        (account) => account.value === currentAccountId || transferAllowsAccount(account),
+      );
     }
-    return base.filter((acc) => restrictionAllowsType(acc.restrictionLevel, effectiveSelectedType));
-  }, [accounts, transferAccounts, effectiveSelectedType]);
+    return base.filter(
+      (account) =>
+        account.value === currentAccountId ||
+        restrictionAllowsType(account.restrictionLevel, effectiveSelectedType),
+    );
+  }, [accounts, transferAccounts, effectiveSelectedType, isEditing, activity?.accountId]);
 
   // Use the activity form hook with the effective type
   const { defaultValues, isLoading, isError, error, handleSubmit } = useActivityForm({

@@ -320,6 +320,7 @@ export interface ActivityUpdate {
   activityDate: string | Date;
   /** Optional grouping key (links paired transfer legs). */
   sourceGroupId?: string;
+  /** Omit to preserve the current asset; pass an empty object to clear it. */
   asset?: AssetResolutionInput;
   /** @deprecated Use asset. */
   symbol?: AssetResolutionInput;
