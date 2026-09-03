@@ -820,6 +820,30 @@ export interface Asset {
   updatedAt: string; // ISO date string
 }
 
+/** One row of the custom-logo index (no image bytes). */
+export interface AssetLogoSummary {
+  assetId: string;
+  displayCode: string | null;
+  sha256: string;
+  updatedAt: string;
+}
+
+/** A custom logo override for an asset, including the PNG bytes as base64. */
+export interface AssetLogo {
+  assetId: string;
+  mimeType: string;
+  dataBase64: string;
+  sha256: string;
+  width: number;
+  height: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertAssetLogoInput {
+  dataBase64: string;
+}
+
 export interface Quote {
   id: string;
   createdAt: string;

@@ -154,11 +154,19 @@ pub async fn search_cash_activities(
         return Ok(CashActivitySearchResponse {
             items: Vec::new(),
             total_count: 0,
+            net: Some(Default::default()),
+            base_currency: None,
         });
     }
+    let base_currency = state.get_base_currency();
+    let timezone = state.get_timezone();
     state
         .cash_activity_service()
-        .search(request.unwrap_or_default())
+        .search(
+            request.unwrap_or_default(),
+            Some(base_currency.as_str()),
+            &timezone,
+        )
         .await
         .map_err(|e| format!("Failed to search cash activities: {}", e))
 }

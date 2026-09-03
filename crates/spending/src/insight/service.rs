@@ -539,36 +539,6 @@ struct SpendAggregate {
     native_outflow_by_currency: HashMap<String, Decimal>,
 }
 
-/// Convert a native amount to the report's target currency at `as_of` date.
-/// Matches the net_worth convention: one rate per report (snapshot date),
-/// not per-activity-date. On error (no rate available even after the
-/// inverse-pair and latest-rate fallbacks), returns None so callers can exclude
-/// the native amount instead of mixing currencies into the target total.
-fn fx_to_target(
-    fx: &dyn FxServiceTrait,
-    amount: Decimal,
-    from: &str,
-    to: &str,
-    as_of: NaiveDate,
-) -> Option<Decimal> {
-    if amount == Decimal::ZERO || from == to || from.is_empty() {
-        return Some(amount);
-    }
-    match fx.convert_currency_for_date(amount, from, to, as_of) {
-        Ok(converted) => Some(converted),
-        Err(e) => {
-            log::warn!(
-                "spending insight FX conversion {}→{} on {} failed ({}); excluding native amount",
-                from,
-                to,
-                as_of,
-                e,
-            );
-            None
-        }
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 #[cfg(test)]
 fn aggregate_spend(
@@ -630,11 +600,11 @@ fn aggregate_spend_with_splits(
             continue;
         }
         let spending_converted =
-            fx_to_target(fx, spending_native, &a.currency, target_currency, fx_as_of);
+            crate::fx::convert(fx, spending_native, &a.currency, target_currency, fx_as_of);
         let spending = spending_converted.unwrap_or(Decimal::ZERO);
-        let income = fx_to_target(fx, income_native, &a.currency, target_currency, fx_as_of)
+        let income = crate::fx::convert(fx, income_native, &a.currency, target_currency, fx_as_of)
             .unwrap_or(Decimal::ZERO);
-        let saved = fx_to_target(fx, saving_native, &a.currency, target_currency, fx_as_of)
+        let saved = crate::fx::convert(fx, saving_native, &a.currency, target_currency, fx_as_of)
             .unwrap_or(Decimal::ZERO);
         agg.total_income += income;
         agg.total_saved += saved;
@@ -694,7 +664,7 @@ fn aggregate_spend_with_splits(
         }
 
         for allocation in allocations {
-            let Some(amount) = fx_to_target(
+            let Some(amount) = crate::fx::convert(
                 fx,
                 allocation.amount,
                 &a.currency,
@@ -740,8 +710,9 @@ fn add_taxonomy_breakdown(
         splits_by_activity,
     );
     if allocations.is_empty() {
-        let amount = fx_to_target(fx, native_amount, from_currency, target_currency, fx_as_of)
-            .unwrap_or(Decimal::ZERO);
+        let amount =
+            crate::fx::convert(fx, native_amount, from_currency, target_currency, fx_as_of)
+                .unwrap_or(Decimal::ZERO);
         if amount == Decimal::ZERO {
             return;
         }
@@ -754,7 +725,7 @@ fn add_taxonomy_breakdown(
     }
 
     for allocation in allocations {
-        let amount = fx_to_target(
+        let amount = crate::fx::convert(
             fx,
             allocation.amount,
             from_currency,
@@ -819,9 +790,10 @@ fn compute_by_day(
         }
         // FX-convert per activity using the same as-of date as the headline
         // aggregate so day-buckets sum to total_outflow within rounding.
-        let spending = fx_to_target(fx, spending_native, &a.currency, target_currency, fx_as_of)
-            .unwrap_or(Decimal::ZERO);
-        let income = fx_to_target(fx, income_native, &a.currency, target_currency, fx_as_of)
+        let spending =
+            crate::fx::convert(fx, spending_native, &a.currency, target_currency, fx_as_of)
+                .unwrap_or(Decimal::ZERO);
+        let income = crate::fx::convert(fx, income_native, &a.currency, target_currency, fx_as_of)
             .unwrap_or(Decimal::ZERO);
         let date = wealthfolio_core::utils::time_utils::activity_date_in_user_timezone(
             a.activity_date,
@@ -897,7 +869,7 @@ fn compute_by_day_by_category_with_splits(
             continue;
         }
         let Some(amount) =
-            fx_to_target(fx, spending_native, &a.currency, target_currency, fx_as_of)
+            crate::fx::convert(fx, spending_native, &a.currency, target_currency, fx_as_of)
         else {
             continue;
         };
@@ -931,7 +903,7 @@ fn compute_by_day_by_category_with_splits(
         }
 
         for allocation in allocations {
-            let Some(line_amount) = fx_to_target(
+            let Some(line_amount) = crate::fx::convert(
                 fx,
                 allocation.amount,
                 &a.currency,
@@ -1006,11 +978,12 @@ fn compute_by_month(
         {
             continue;
         }
-        let spending = fx_to_target(fx, spending_native, &a.currency, target_currency, fx_as_of)
+        let spending =
+            crate::fx::convert(fx, spending_native, &a.currency, target_currency, fx_as_of)
+                .unwrap_or(Decimal::ZERO);
+        let income = crate::fx::convert(fx, income_native, &a.currency, target_currency, fx_as_of)
             .unwrap_or(Decimal::ZERO);
-        let income = fx_to_target(fx, income_native, &a.currency, target_currency, fx_as_of)
-            .unwrap_or(Decimal::ZERO);
-        let saved = fx_to_target(fx, saving_native, &a.currency, target_currency, fx_as_of)
+        let saved = crate::fx::convert(fx, saving_native, &a.currency, target_currency, fx_as_of)
             .unwrap_or(Decimal::ZERO);
         let key = period_key_for_date_in_tz(a.activity_date, timezone);
         let entry = map
@@ -1342,7 +1315,9 @@ fn compute_pace(
             }
             let classification = classify_activity(a, account_type);
             let native = classification.spending_amount(activity_abs_amount(a));
-            if let Some(amount) = fx_to_target(fx, native, &a.currency, target_currency, fx_as_of) {
+            if let Some(amount) =
+                crate::fx::convert(fx, native, &a.currency, target_currency, fx_as_of)
+            {
                 sum += amount;
             }
         }

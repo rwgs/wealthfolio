@@ -14,6 +14,7 @@ import {
   resolveFormattingLocale,
 } from "@wealthfolio/ui";
 import { format } from "date-fns";
+import { zhTW } from "date-fns/locale";
 import { describe, expect, it, vi } from "vitest";
 import { formatOptionSubtitle } from "./occ-symbol";
 
@@ -28,6 +29,7 @@ describe("locale formatting", () => {
     expect(resolveFormattingLocale("de-DE", "en")).toBe("de-DE");
     expect(resolveFormattingLocale("DE", "en")).toBe("de-DE");
     expect(resolveFormattingLocale("DE", "ja")).toBe("de-DE");
+    expect(resolveFormattingLocale("TW", "en")).toBe("zh-TW");
     expect(resolveFormattingLocale("en-US", "fr")).toBe("en-US");
   });
 
@@ -69,6 +71,19 @@ describe("locale formatting", () => {
     expect(dateFnsLocaleFor("es-MX").options?.weekStartsOn).toBe(0);
     expect(() => dateFnsLocaleFor(undefined)).toThrow("A resolved formatting locale is required");
   });
+
+  it.each(["zh-TW", "zh-Hant", "zh-Hant-TW", "zh-HK", "zh-MO"])(
+    "gives %s Traditional calendar text with a Sunday week start",
+    (tag) => {
+      const locale = dateFnsLocaleFor(tag);
+      // Text comes from date-fns zhTW ...
+      expect(locale.formatDistance).toBe(zhTW.formatDistance);
+      expect(format(new Date(2026, 7, 30), "PPPP", { locale })).toContain("星期日");
+      // ... but the week start comes from CLDR, which says Sunday for all of these.
+      // date-fns ships zhTW with Monday, so returning it verbatim would be wrong.
+      expect(locale.options?.weekStartsOn).toBe(0);
+    },
+  );
 
   it.each(["it-IT", "pt-BR", "nl-NL", "ar-EG", "fa-IR"])(
     "supports the arbitrary system locale %s in date-fns calendars",

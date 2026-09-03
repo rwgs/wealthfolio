@@ -8,6 +8,8 @@ pub const APP_SYNC_TABLES: &[&str] = &[
     // Base tables (no FK deps)
     "platforms",
     "assets",
+    // Depends on: assets (PK asset_id). Custom logo overrides.
+    "asset_logos",
     // Per-addon key-value storage. Composite PK (addon_id, key), no FK deps.
     "addon_storage",
     // No FK deps
@@ -78,6 +80,11 @@ pub const APP_SYNC_TABLES: &[&str] = &[
     "allocation_target_constraints",
 ];
 
+/// Schema version stamped on uploaded snapshots. Bumped to 2 when `asset_logos`
+/// joined `APP_SYNC_TABLES`; older clients refuse newer snapshots so a device never
+/// bootstraps from a snapshot missing a table it expects.
+pub const SNAPSHOT_SCHEMA_VERSION: i32 = 2;
+
 /// Entity names used by incremental sync events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -125,6 +132,8 @@ pub enum SyncEntity {
     BudgetRolloverSetting,
     // Per-addon key-value storage (composite PK). Custom apply branch.
     AddonStorage,
+    // Custom asset logo override (PK asset_id). Pure LWW, generic apply.
+    AssetLogo,
 }
 
 /// Supported sync operations.
@@ -366,6 +375,7 @@ mod tests {
             SyncEntity::BudgetTarget,
             SyncEntity::BudgetRolloverSetting,
             SyncEntity::AddonStorage,
+            SyncEntity::AssetLogo,
         ]
         .iter()
         .map(|entity| serde_json::to_string(entity).expect("serialize sync entity"))
@@ -409,6 +419,7 @@ mod tests {
             "\"budget_target\"",
             "\"budget_rollover_setting\"",
             "\"addon_storage\"",
+            "\"asset_logo\"",
         ];
 
         assert_eq!(actual, expected);

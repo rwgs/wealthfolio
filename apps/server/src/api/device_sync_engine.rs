@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::main_lib::AppState;
 use wealthfolio_core::events::DomainEvent;
-use wealthfolio_core::sync::APP_SYNC_TABLES;
+use wealthfolio_core::sync::{APP_SYNC_TABLES, SNAPSHOT_SCHEMA_VERSION};
 use wealthfolio_device_sync::engine::{
     self, CredentialStore, OutboxStore, ReadyReconcileStore, ReplayEvent, ReplayStore,
     SyncIdentity, SyncTransport, TransportError,
@@ -1212,7 +1212,7 @@ pub async fn sync_bootstrap_snapshot_if_needed(
         }
     };
 
-    const LOCAL_SCHEMA_VERSION: i32 = 1;
+    const LOCAL_SCHEMA_VERSION: i32 = SNAPSHOT_SCHEMA_VERSION;
     if latest.schema_version > LOCAL_SCHEMA_VERSION {
         return Err(format!(
             "Snapshot schema version {} is newer than local version {}. Please update the app.",
@@ -1440,7 +1440,7 @@ pub async fn generate_snapshot_now(
     let checksum = sha256_checksum(&payload);
     let metadata_payload = encrypt_sync_payload(
         &serde_json::json!({
-            "schemaVersion": 1,
+            "schemaVersion": SNAPSHOT_SCHEMA_VERSION,
             "coversTables": APP_SYNC_TABLES,
             "generatedAt": Utc::now().to_rfc3339(),
         })
@@ -1458,7 +1458,7 @@ pub async fn generate_snapshot_now(
     );
     let upload_headers = wealthfolio_device_sync::SnapshotUploadHeaders {
         event_id: Some(Uuid::now_v7().to_string()),
-        schema_version: 1,
+        schema_version: SNAPSHOT_SCHEMA_VERSION,
         covers_tables: APP_SYNC_TABLES.iter().map(|v| v.to_string()).collect(),
         size_bytes: payload.len() as i64,
         checksum,

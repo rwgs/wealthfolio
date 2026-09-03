@@ -163,9 +163,16 @@ async fn search_cash_activities(
         return Ok(Json(CashActivitySearchResponse {
             items: Vec::new(),
             total_count: 0,
+            net: Some(Default::default()),
+            base_currency: None,
         }));
     }
-    let response = state.cash_activity_service.search(request).await?;
+    let base = state.base_currency.read().unwrap().clone();
+    let timezone = state.timezone.read().unwrap().clone();
+    let response = state
+        .cash_activity_service
+        .search(request, Some(base.as_str()), &timezone)
+        .await?;
     Ok(Json(response))
 }
 
