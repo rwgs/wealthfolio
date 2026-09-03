@@ -293,7 +293,7 @@
   "import_help_docs_activity_ref": "documentation de référence des activités",
   "import_help_how_to_title": "Comment importer un CSV ?",
   "import_help_how_to_mobile": "Comment importer un CSV",
-  "pagination_count": "{{fetched}} / {{total}} activités",
+  "pagination_count": "{{fetched}}/{{total}} activités",
   "manager": {
     "add_to_account": "Ajouter une nouvelle transaction à {{account}}",
     "create_transaction": "Créer une nouvelle transaction ou activité pour votre compte",
@@ -347,7 +347,8 @@
     "status_all": "Toutes les activités",
     "status_pending": "En attente de révision",
     "status_validated": "Validé",
-    "instrument": "Instrument"
+    "instrument": "Instrument",
+    "instrument_all": "Tous les instruments"
   },
   "detail": {
     "status_posted": "Comptabilisé",

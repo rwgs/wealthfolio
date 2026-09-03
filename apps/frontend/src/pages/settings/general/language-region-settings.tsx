@@ -33,6 +33,7 @@ const FORMATTING_REGION_OPTIONS = [
   ["BR", "brazil"],
   ["PT", "portugal"],
   ["CN", "china"],
+  ["TW", "taiwan"],
   ["JP", "japan"],
   ["KR", "southKorea"],
   ["IT", "italy"],

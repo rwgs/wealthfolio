@@ -293,7 +293,7 @@
   "import_help_docs_activity_ref": "documentazione di riferimento sui movimenti",
   "import_help_how_to_title": "Come importare un CSV?",
   "import_help_how_to_mobile": "Come importare un CSV",
-  "pagination_count": "{{fetched}} / {{total}} movimenti",
+  "pagination_count": "{{fetched}}/{{total}} movimenti",
   "manager": {
     "add_to_account": "Aggiungi una nuova transazione a {{account}}",
     "create_transaction": "Crea una nuova transazione o movimento per il tuo conto",
@@ -347,7 +347,8 @@
     "status_all": "Tutti i movimenti",
     "status_pending": "In attesa di revisione",
     "status_validated": "Convalidati",
-    "instrument": "Strumento"
+    "instrument": "Strumento",
+    "instrument_all": "Tutti gli strumenti"
   },
   "detail": {
     "status_posted": "Registrato",

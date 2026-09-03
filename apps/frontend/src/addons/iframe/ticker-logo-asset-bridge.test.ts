@@ -1,5 +1,36 @@
 import { describe, expect, it, vi } from "vitest";
+import { AssetLogoRegistry } from "@/lib/asset-logo-registry";
+import type { AssetLogo } from "@/lib/types";
 import { normalizeTickerLogoSymbol, TickerLogoAssetBridge } from "./ticker-logo-asset-bridge";
+
+vi.mock("@/adapters", () => ({ getAssetLogo: vi.fn() }));
+
+function customLogo(assetId: string, bytes: string): AssetLogo {
+  return {
+    assetId,
+    mimeType: "image/png",
+    dataBase64: btoa(bytes),
+    sha256: `sha-${assetId}-${bytes}`,
+    width: 256,
+    height: 256,
+    createdAt: "2026-09-02T00:00:00Z",
+    updatedAt: "2026-09-02T00:00:00Z",
+  };
+}
+
+function registryWith(assetId: string, displayCode: string, bytes: string) {
+  const logo = customLogo(assetId, bytes);
+  const registry = new AssetLogoRegistry(vi.fn().mockResolvedValue(logo));
+  registry.setIndex([
+    {
+      assetId,
+      displayCode,
+      sha256: logo.sha256,
+      updatedAt: logo.updatedAt,
+    },
+  ]);
+  return registry;
+}
 
 function pngResponse(content = "png", headers: Record<string, string> = {}) {
   return new Response(new Blob([content], { type: "image/png" }), {
@@ -87,5 +118,65 @@ describe("TickerLogoAssetBridge", () => {
     await expect(retryingBridge.load("RETRY")).resolves.toBeNull();
     await expect(retryingBridge.load("RETRY")).resolves.toBeInstanceOf(Blob);
     expect(transientFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves a custom logo from the registry without fetching the bundled file", async () => {
+    const fetchMock = vi.fn();
+    const registry = registryWith("a1", "AAPL", "custom-bytes");
+    const bridge = new TickerLogoAssetBridge(fetchMock as unknown as typeof fetch, 2, registry);
+
+    const blob = await bridge.load("aapl");
+
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob?.type).toBe("image/png");
+    await expect(blob!.text()).resolves.toBe("custom-bytes");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(bridge.cacheSize).toBe(0);
+
+    // Decoded again from the registry's cached bytes: same content, still no fetch.
+    const again = await bridge.load("AAPL");
+    expect(again?.size).toBe(blob?.size);
+    expect(again?.type).toBe("image/png");
+    await expect(again!.text()).resolves.toBe("custom-bytes");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a new override without evicting the bundled cache", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(pngResponse("bundled")));
+    const registry = new AssetLogoRegistry(vi.fn().mockResolvedValue(customLogo("a1", "override")));
+    const bridge = new TickerLogoAssetBridge(fetchMock as unknown as typeof fetch, 2, registry);
+
+    const bundled = await bridge.load("AAPL");
+    expect(bundled).toBeInstanceOf(Blob);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    registry.setIndex([
+      {
+        assetId: "a1",
+        displayCode: "AAPL",
+        sha256: "sha-a1-override",
+        updatedAt: "2026-09-02T00:00:00Z",
+      },
+    ]);
+
+    const override = await bridge.load("AAPL");
+    await expect(override!.text()).resolves.toBe("override");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(bridge.cacheSize).toBe(1);
+
+    // Reset → straight back to the cached bundled Blob, still no refetch.
+    registry.reset();
+    await expect(bridge.load("AAPL")).resolves.toBe(bundled);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the bundled path when no override exists for the symbol", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(pngResponse()));
+    const registry = registryWith("a1", "AAPL", "custom");
+    const bridge = new TickerLogoAssetBridge(fetchMock as unknown as typeof fetch, 2, registry);
+
+    await expect(bridge.load("MSFT")).resolves.toBeInstanceOf(Blob);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/ticker-logos/MSFT.png");
   });
 });

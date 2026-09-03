@@ -197,9 +197,9 @@
     "statusNeedsReview": "Zu prüfen",
     "statusUncategorized": "Nicht kategorisiert",
     "statusCategorized": "Kategorisiert",
-    "countLabel": "{{visible}} / {{total}} Transaktionen",
-    "countLabel_one": "{{visible}} / {{total}} Transaktion",
-    "countLabel_other": "{{visible}} / {{total}} Transaktionen",
+    "countLabel": "{{visible}}/{{total}} Transaktionen",
+    "countLabel_one": "{{visible}}/{{total}} Transaktion",
+    "countLabel_other": "{{visible}}/{{total}} Transaktionen",
     "countZero": "0 Transaktionen",
     "category": "Kategorie",
     "subcategory": "Unterkategorie",
@@ -207,7 +207,9 @@
     "filterTransactions": "Transaktionen filtern",
     "clearAll": "Alle löschen",
     "done": "Fertig",
-    "refreshing": "Wird aktualisiert"
+    "refreshing": "Wird aktualisiert",
+    "selectedNet": "Netto (Auswahl)",
+    "filteredNet": "Netto (Filter)"
   },
   "period": {
     "thisMonth": "Dieser Monat",
@@ -823,7 +825,13 @@
     "addTransaction": "Transaktion hinzufügen",
     "deselectAllVisible": "Alle sichtbaren Transaktionen abwählen",
     "selectAllVisible": "Alle sichtbaren Transaktionen auswählen",
-    "nameNotes": "Name / Notizen"
+    "nameNotes": "Name / Notizen",
+    "time": "Uhrzeit",
+    "net": "Netto",
+    "dayCount_one": "{{count}} Transaktion",
+    "dayCount_other": "{{count}} Transaktionen",
+    "selectDay": "Alle Transaktionen vom {{date}} auswählen",
+    "deselectDay": "Alle Transaktionen vom {{date}} abwählen"
   },
   "tabContent": {
     "stageWhereLabel": "Wo ich stehe",

@@ -203,10 +203,10 @@
     "statusNeedsReview": "Precisa de revisão",
     "statusUncategorized": "Sem categoria",
     "statusCategorized": "Categorizadas",
-    "countLabel": "{{visible}} / {{total}} transações",
-    "countLabel_one": "{{visible}} / {{total}} transação",
-    "countLabel_other": "{{visible}} / {{total}} transações",
-    "countLabel_many": "{{visible}} / {{total}} transações",
+    "countLabel": "{{visible}}/{{total}} transações",
+    "countLabel_one": "{{visible}}/{{total}} transação",
+    "countLabel_other": "{{visible}}/{{total}} transações",
+    "countLabel_many": "{{visible}}/{{total}} transações",
     "countZero": "0 transações",
     "category": "Categoria",
     "subcategory": "Subcategoria",
@@ -214,7 +214,9 @@
     "filterTransactions": "Filtrar transações",
     "clearAll": "Limpar tudo",
     "done": "Concluído",
-    "refreshing": "Atualizando"
+    "refreshing": "Atualizando",
+    "selectedNet": "Líquido selecionado",
+    "filteredNet": "Líquido filtrado"
   },
   "period": {
     "thisMonth": "Este mês",
@@ -871,7 +873,14 @@
     "addTransaction": "Adicionar transação",
     "deselectAllVisible": "Desmarcar todas as transações visíveis",
     "selectAllVisible": "Selecionar todas as transações visíveis",
-    "nameNotes": "Nome / Notas"
+    "nameNotes": "Nome / Notas",
+    "time": "Hora",
+    "net": "Líquido",
+    "dayCount_one": "{{count}} transação",
+    "dayCount_other": "{{count}} transações",
+    "dayCount_many": "{{count}} transações",
+    "selectDay": "Selecionar todas as transações de {{date}}",
+    "deselectDay": "Desmarcar todas as transações de {{date}}"
   },
   "tabContent": {
     "stageWhereLabel": "Onde estou",

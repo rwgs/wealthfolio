@@ -90,7 +90,17 @@ Behavior and rules:
   cannot see yours.
 - **Language follows the host.** There is no API to change the language from an
   addon — the UI language is a user setting. `language` from the hook tells you
-  the current base code (`en`, `fr`, `de`, `es`, `zh`, `ja`, `ko`).
+  the current host locale code: `en`, `fr`, `de`, `es`, `pt`, `zh`, `zh-Hant`,
+  `ja`, `ko`, `it`.
+
+  Note that these are **not** all bare language codes. `zh-Hant` (Traditional
+  Chinese) carries a script subtag, so `language.split("-")[0]` is not a safe
+  way to key a lookup table — it collapses Traditional and Simplified onto the
+  same `zh`. Compare against the full code, and register a `zh-Hant` bundle
+  separately from `zh`. A missing `zh-Hant` string falls back to your `en`
+  bundle, never to `zh`: Simplified glyphs in a Traditional UI read as broken
+  rather than untranslated.
+
 - **Fallback is your `en` bundle.** If the current language is missing a key (or
   the whole bundle), lookup falls back to your `en` resources; if that is
   missing too, the key itself is rendered. Always ship a complete `en` bundle.
