@@ -1,11 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { useAssetLogoOverride } from "@/lib/asset-logo-registry";
 import { cn } from "@/lib/utils";
 import { parseOccSymbol } from "@/lib/occ-symbol";
 import { Avatar, AvatarFallback, AvatarImage } from "@wealthfolio/ui";
 
 interface TickerAvatarProps {
   symbol: string;
+  /** Enables an asset-scoped custom-logo override lookup. */
+  assetId?: string | null;
+  /** Explicit image to show first (e.g. a not-yet-saved preview). */
+  src?: string;
   className?: string;
   imageClassName?: string;
 }
@@ -33,6 +38,8 @@ const getFallbackAvatarLabel = (symbol: string): string => symbol.slice(0, 4);
 
 export const TickerAvatar = ({
   symbol,
+  assetId,
+  src,
   className = "size-8",
   imageClassName = "object-contain p-2",
 }: TickerAvatarProps) => {
@@ -44,16 +51,30 @@ export const TickerAvatar = ({
   const baseSymbol = logoSymbol ? logoSymbol.split(/[.:-]/)[0].toUpperCase() : "";
   const fullSymbol = logoSymbol ? logoSymbol.toUpperCase() : "";
 
-  // Try full symbol first, then fallback to base symbol
+  const override = useAssetLogoOverride({ assetId, symbol: fullSymbol });
+  const customSrc = src ?? override.dataUri;
+
+  // Candidate chain: custom override → full symbol → base symbol (deduped, empty dropped)
   const primaryLogoUrl = fullSymbol ? `/ticker-logos/${fullSymbol}.png` : "";
   const fallbackLogoUrl = baseSymbol ? `/ticker-logos/${baseSymbol}.png` : "";
+  const candidates = [customSrc, primaryLogoUrl, fallbackLogoUrl].filter(
+    (url, index, all): url is string => !!url && all.indexOf(url) === index,
+  );
+  // Key the chain by identity, not by the (possibly 200 KB) data URI itself.
+  const customKey = src
+    ? `src:${src.length}`
+    : override.dataUri
+      ? (override.ref?.sha256 ?? "")
+      : "";
+  const chainKey = `${customKey}\n${primaryLogoUrl}\n${fallbackLogoUrl}`;
   const cashAvatarLabel = getCashAvatarLabel(fullSymbol);
   const fallbackAvatarLabel = baseSymbol ? getFallbackAvatarLabel(baseSymbol) : "•";
-  const [logoUrl, setLogoUrl] = useState(primaryLogoUrl);
 
-  useEffect(() => {
-    setLogoUrl(primaryLogoUrl);
-  }, [primaryLogoUrl]);
+  // Index of the candidate currently shown; restarts from 0 whenever the chain changes
+  const [failed, setFailed] = useState({ chainKey, index: 0 });
+  const candidateIndex = failed.chainKey === chainKey ? failed.index : 0;
+  const logoUrl = candidates[candidateIndex] ?? "";
+  const logoSource = !logoUrl ? "initials" : logoUrl === customSrc ? "custom" : "bundled";
 
   if (cashAvatarLabel) {
     return (
@@ -70,18 +91,15 @@ export const TickerAvatar = ({
   return (
     <Avatar
       className={cn("bg-primary/80 dark:bg-primary/20 border-white/20 backdrop-blur-md", className)}
+      data-logo-source={logoSource}
     >
       <AvatarImage
         src={logoUrl}
         alt={fullSymbol}
         className={imageClassName}
         onLoadingStatusChange={(status) => {
-          if (
-            status === "error" &&
-            logoUrl === primaryLogoUrl &&
-            fallbackLogoUrl !== primaryLogoUrl
-          ) {
-            setLogoUrl(fallbackLogoUrl);
+          if (status === "error" && logoUrl && candidateIndex < candidates.length) {
+            setFailed({ chainKey, index: candidateIndex + 1 });
           }
         }}
       />

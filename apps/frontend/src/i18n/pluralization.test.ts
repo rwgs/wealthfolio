@@ -13,6 +13,7 @@ import jaCommon from "./locales/ja/common.json";
 import koCommon from "./locales/ko/common.json";
 import ptCommon from "./locales/pt/common.json";
 import zhCommon from "./locales/zh/common.json";
+import zhHantCommon from "./locales/zh-Hant/common.json";
 import i18next from "i18next";
 import { describe, expect, it } from "vitest";
 
@@ -57,6 +58,7 @@ describe("global event translations", () => {
     ["ja", jaCommon],
     ["ko", koCommon],
     ["zh", zhCommon],
+    ["zh-Hant", zhHantCommon],
     ["it", itCommon],
     ["pt", ptCommon],
   ])("resolves asset-count messages for %s", async (locale, common) => {

@@ -820,6 +820,16 @@ body.qr-scan-active .scan-hide-target {
     overflow-x: visible;
   }
 
+  /* The .flex/.grid rule above sets overflow-x, which per spec forces the other
+     axis to compute as `auto` — so every flex row becomes a scroll container and
+     paints an empty scrollbar track wherever the platform always shows them.
+     The spending card list is bare rows on the page background, where those
+     tracks are plainly visible, so it opts out the same way. */
+  .spending-activity-list .flex,
+  .spending-activity-list .grid {
+    overflow-x: visible;
+  }
+
   .aui-thread-viewport {
     overflow-x: auto;
   }

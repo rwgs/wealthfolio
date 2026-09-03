@@ -195,9 +195,9 @@
     "statusNeedsReview": "要確認",
     "statusUncategorized": "未分類",
     "statusCategorized": "分類済み",
-    "countLabel": "取引 {{visible}} / {{total}}件",
-    "countLabel_one": "取引 {{visible}} / {{total}}件",
-    "countLabel_other": "取引 {{visible}} / {{total}}件",
+    "countLabel": "取引 {{visible}}/{{total}}件",
+    "countLabel_one": "取引 {{visible}}/{{total}}件",
+    "countLabel_other": "取引 {{visible}}/{{total}}件",
     "countZero": "取引0件",
     "category": "カテゴリ",
     "subcategory": "サブカテゴリ",
@@ -205,7 +205,9 @@
     "filterTransactions": "取引を絞り込む",
     "clearAll": "すべてクリア",
     "done": "完了",
-    "refreshing": "更新中"
+    "refreshing": "更新中",
+    "selectedNet": "選択の収支",
+    "filteredNet": "絞り込みの収支"
   },
   "period": {
     "thisMonth": "今月",
@@ -814,7 +816,13 @@
     "addTransaction": "取引を追加",
     "deselectAllVisible": "表示中の取引の選択をすべて解除",
     "selectAllVisible": "表示中の取引をすべて選択",
-    "nameNotes": "名前 / メモ"
+    "nameNotes": "名前 / メモ",
+    "time": "時刻",
+    "net": "収支",
+    "dayCount_one": "取引{{count}}件",
+    "dayCount_other": "取引{{count}}件",
+    "selectDay": "{{date}}の取引をすべて選択",
+    "deselectDay": "{{date}}の取引の選択をすべて解除"
   },
   "tabContent": {
     "stageWhereLabel": "現状",

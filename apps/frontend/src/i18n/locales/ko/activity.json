@@ -291,7 +291,7 @@
   "import_help_docs_activity_ref": "활동 참조 문서",
   "import_help_how_to_title": "CSV를 가져오는 방법은?",
   "import_help_how_to_mobile": "CSV 가져오는 방법",
-  "pagination_count": "활동 {{fetched}} / {{total}}건",
+  "pagination_count": "활동 {{fetched}}/{{total}}건",
   "manager": {
     "add_to_account": "{{account}}에 새 거래 추가",
     "create_transaction": "계좌에 새 거래 또는 활동을 만듭니다",
@@ -343,7 +343,8 @@
     "status_all": "모든 활동",
     "status_pending": "검토 대기 중",
     "status_validated": "검증됨",
-    "instrument": "상품"
+    "instrument": "상품",
+    "instrument_all": "모든 상품"
   },
   "detail": {
     "status_posted": "반영됨",

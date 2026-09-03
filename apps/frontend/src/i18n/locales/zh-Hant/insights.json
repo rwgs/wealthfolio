@@ -1,0 +1,129 @@
+{
+  "insights": {
+    "loading_dashboard": "正在載入儀表板……",
+    "tab_overview": "概覽",
+    "tab_performance": "績效",
+    "tab_income": "收入",
+    "back_to_allocation": "返回配置",
+    "target_allocation": "目標配置",
+    "back_to_overview": "返回概覽",
+    "rebalance": "再平衡",
+    "no_target_selected": "未選擇目標",
+    "no_target_selected_description": "建立目標配置，以將目前權重與預選擇權重進行比較。",
+    "set_target_allocation": "設定目標配置",
+    "chart_classes": "類別",
+    "chart_regions": "地區",
+    "chart_sectors": "產業",
+    "explorer": {
+      "lens_allocation": "配置",
+      "lens_accounts": "帳戶",
+      "lens_sectors": "產業",
+      "lens_regions": "地區",
+      "lens_risk": "風險",
+      "lens_security": "證券類型",
+      "lens_currency": "貨幣",
+      "unit_categories": "個類別",
+      "unit_accounts": "個帳戶",
+      "unit_sectors": "個產業",
+      "unit_regions": "個地區",
+      "unit_levels": "個級別",
+      "unit_types": "個類型",
+      "unit_currencies": "種貨幣",
+      "unit_groups": "個分組",
+      "other_units": "其他 {{unit}}",
+      "breakdown": "明細",
+      "top_units": "前 {{unit}}",
+      "show_less": "收起",
+      "show_all": "顯示全部"
+    },
+    "rails": {
+      "target_allocation": "目標配置",
+      "details": "詳情",
+      "suggested_moves": "建議操作",
+      "all_in_range": "所有類別均在目標區間內——無需再平衡",
+      "add": "增持",
+      "trim": "減持",
+      "inside_target_range": "在目標區間內",
+      "outside_range": "{{count}} 項超出區間 · 最大偏差 {{gap}}",
+      "tolerance": "容差 {{tolerance}}",
+      "current": "目前",
+      "target": "目標",
+      "no_target_yet": "尚無目標配置",
+      "compare_weights": "將目前權重與您預期的投資組合進行比較。",
+      "set_target_allocation": "設定目標配置",
+      "outside_range_other": "{{count}} 項超出區間 · 最大偏差 {{gap}}",
+      "outside_range_one": "{{count}} 項超出區間 · 最大偏差 {{gap}}"
+    },
+    "value_strip": {
+      "portfolio_value": "投資組合價值",
+      "cash_balance": "現金餘額",
+      "invested": "已投資",
+      "book_cost": "帳面成本",
+      "no_cash_balance": "無現金餘額",
+      "of_portfolio": "佔投資組合的 {{percent}}",
+      "available_cash": "可用現金",
+      "holdings_count_one": "{{count}} 項持倉",
+      "holdings_count_other": "{{count}} 項持倉",
+      "accounts_count_one": "{{count}} 個帳戶",
+      "accounts_count_other": "{{count}} 個帳戶"
+    }
+  },
+  "networth": {
+    "failed_to_load": "載入淨資產失敗",
+    "stale_valuations_tooltip": "陳舊估值（90 天以上）：",
+    "days_ago": "{{count}} 天前",
+    "no_history_data": "暫無可用的歷史資料",
+    "breakdown": "明細",
+    "no_assets_found": "找不到資產。",
+    "add_first_asset": "新增您的第一項資產",
+    "update_valuations": "更新您的估值",
+    "assets_count_one": "{{count}} 項資產",
+    "assets_count_other": "{{count}} 項資產",
+    "not_updated_over_90_days": "超過 90 天未更新。",
+    "chart": {
+      "net_worth": "淨資產",
+      "net_worth_label": "淨資產：",
+      "assets_label": "資產：",
+      "liabilities_label": "負債："
+    },
+    "breakdown_table": {
+      "change_over": "{{period}} 內變化",
+      "assets": "資產",
+      "category": "類別",
+      "value": "價值",
+      "delta_period": "Δ {{period}}",
+      "new": "新增",
+      "liabilities": "負債",
+      "net_worth": "淨資產"
+    },
+    "category_sheet": {
+      "over_period": "在 {{period}} 內",
+      "trend_period": "趨勢 · {{period}}",
+      "items": "項目"
+    },
+    "trend": {
+      "not_enough_history": "歷史資料不足"
+    },
+    "momentum": {
+      "title": "動能",
+      "all_time": "全部時間",
+      "vs_prior": "比較上一 {{period}}",
+      "beat_prior": "超出上一期 ",
+      "behind_prior": "落後上一期 ",
+      "now": "目前"
+    },
+    "velocity": {
+      "monthly_pace": "月度節奏",
+      "over_months_one": "在 {{count}} 個月內",
+      "over_months_other": "在 {{count}} 個月內",
+      "trailing_pace": " · 過去 12 個月節奏的 {{multiple}} 倍",
+      "drivers_of_change": "變化驅動因素",
+      "market_returns": "市場報酬",
+      "contributions": "投入",
+      "equity_built": "累積權益",
+      "per_month": "/月"
+    },
+    "days_ago_other": "{{count}} 天前",
+    "days_ago_one": "{{count}} 天前"
+  }
+}

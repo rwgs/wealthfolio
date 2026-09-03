@@ -111,6 +111,9 @@ export * from "../shared/taxonomies";
 // Alternative Assets Commands
 export * from "../shared/alternative-assets";
 
+// Asset Logo Commands
+export * from "../shared/asset-logos";
+
 // Contribution Limits Commands
 export * from "../shared/contribution-limits";
 
