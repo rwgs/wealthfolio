@@ -1398,7 +1398,7 @@ pub fn read_addon_files_recursive(
             let relative_path = file_path
                 .strip_prefix(base_dir)
                 .map_err(|e| format!("Failed to get relative path: {}", e))?;
-            let relative_path_str = relative_path.to_string_lossy().to_string();
+            let relative_path_str = normalized_addon_path(relative_path);
 
             if is_brokered_addon_asset_path(&relative_path_str) {
                 continue;

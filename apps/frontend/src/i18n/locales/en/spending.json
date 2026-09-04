@@ -197,9 +197,9 @@
     "statusNeedsReview": "Needs review",
     "statusUncategorized": "Uncategorized",
     "statusCategorized": "Categorized",
-    "countLabel": "{{visible}} / {{total}} transactions",
-    "countLabel_one": "{{visible}} / {{total}} transaction",
-    "countLabel_other": "{{visible}} / {{total}} transactions",
+    "countLabel": "{{visible}}/{{total}} transactions",
+    "countLabel_one": "{{visible}}/{{total}} transaction",
+    "countLabel_other": "{{visible}}/{{total}} transactions",
     "countZero": "0 transactions",
     "category": "Category",
     "subcategory": "Subcategory",
@@ -207,7 +207,9 @@
     "filterTransactions": "Filter transactions",
     "clearAll": "Clear all",
     "done": "Done",
-    "refreshing": "Refreshing"
+    "refreshing": "Refreshing",
+    "selectedNet": "Selected net",
+    "filteredNet": "Filtered net"
   },
   "period": {
     "thisMonth": "This month",
@@ -823,7 +825,13 @@
     "addTransaction": "Add transaction",
     "deselectAllVisible": "Deselect all visible transactions",
     "selectAllVisible": "Select all visible transactions",
-    "nameNotes": "Name / Notes"
+    "nameNotes": "Name / Notes",
+    "time": "Time",
+    "net": "Net",
+    "dayCount_one": "{{count}} transaction",
+    "dayCount_other": "{{count}} transactions",
+    "selectDay": "Select all transactions on {{date}}",
+    "deselectDay": "Deselect all transactions on {{date}}"
   },
   "tabContent": {
     "stageWhereLabel": "Where I am",

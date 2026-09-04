@@ -70,7 +70,9 @@ export function ClassificationSheet({
       <SheetContent side="right" className="flex h-full w-full flex-col sm:max-w-lg">
         <SheetHeader className="shrink-0 pb-4">
           <div className="flex items-center gap-3">
-            {assetSymbol && <TickerAvatar symbol={assetSymbol} className="size-10" />}
+            {assetSymbol && (
+              <TickerAvatar symbol={assetSymbol} assetId={assetId} className="size-10" />
+            )}
             <div className="min-w-0 flex-1">
               <SheetTitle className="truncate text-lg">
                 {assetSymbol || t("asset:classification.classifyAsset")}

@@ -291,7 +291,7 @@
   "import_help_docs_activity_ref": "活动参考文档",
   "import_help_how_to_title": "如何导入 CSV？",
   "import_help_how_to_mobile": "如何导入 CSV",
-  "pagination_count": "{{fetched}} / {{total}} 条活动",
+  "pagination_count": "{{fetched}}/{{total}} 条活动",
   "manager": {
     "add_to_account": "向 {{account}} 添加一笔新交易",
     "create_transaction": "为您的账户创建一笔新交易或活动",
@@ -357,7 +357,8 @@
     "status_all": "所有活动",
     "status_pending": "待审核",
     "status_validated": "已校验",
-    "instrument": "金融工具"
+    "instrument": "金融工具",
+    "instrument_all": "所有金融工具"
   },
   "detail": {
     "status_posted": "已入账",

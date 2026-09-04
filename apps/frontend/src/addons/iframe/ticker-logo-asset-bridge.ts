@@ -1,5 +1,16 @@
+import { assetLogoRegistry, type AssetLogoRegistry } from "@/lib/asset-logo-registry";
+
 const MAX_TICKER_LOGO_BYTES = 512 * 1024;
 const DEFAULT_CACHE_SIZE = 256;
+
+function dataUriToBlob(dataUri: string): Blob {
+  const [header, payload = ""] = dataUri.split(",", 2);
+  const mimeType = header.slice("data:".length).split(";", 1)[0] || "image/png";
+  const binary = atob(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mimeType });
+}
 
 export function normalizeTickerLogoSymbol(symbol: unknown) {
   if (typeof symbol !== "string") {
@@ -26,6 +37,7 @@ export class TickerLogoAssetBridge {
   constructor(
     private readonly fetchAsset: typeof fetch = fetch,
     private readonly maxEntries = DEFAULT_CACHE_SIZE,
+    private readonly registry: AssetLogoRegistry = assetLogoRegistry,
   ) {}
 
   load(symbol: unknown): Promise<Blob | null> {
@@ -34,6 +46,16 @@ export class TickerLogoAssetBridge {
       return Promise.resolve(null);
     }
 
+    // Custom logos are consulted before the bundled LRU on every call, so a new
+    // upload is visible without evicting anything. Limitation: an already mounted
+    // SandboxTickerAvatar only picks the change up on its next mount (host→sandbox
+    // broadcast is a follow-up).
+    return this.registry
+      .load({ symbol: normalized })
+      .then((uri) => (uri ? dataUriToBlob(uri) : this.loadBundled(normalized)));
+  }
+
+  private loadBundled(normalized: string): Promise<Blob | null> {
     const cached = this.cache.get(normalized);
     if (cached !== undefined) {
       this.cache.delete(normalized);

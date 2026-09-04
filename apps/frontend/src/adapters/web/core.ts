@@ -151,6 +151,11 @@ export const COMMANDS: CommandMap = {
   get_asset_profile: { method: "GET", path: "/assets/profile" },
   update_asset_profile: { method: "PUT", path: "/assets/profile" },
   update_quote_mode: { method: "PUT", path: "/assets/pricing-mode" },
+  // Asset logos
+  list_asset_logos: { method: "GET", path: "/assets/logos" },
+  get_asset_logo: { method: "GET", path: "/assets/logo" },
+  upsert_asset_logo: { method: "PUT", path: "/assets/logo" },
+  delete_asset_logo: { method: "DELETE", path: "/assets/logo" },
   // Market data
   search_symbol: { method: "GET", path: "/market-data/search" },
   resolve_symbol_quote: { method: "GET", path: "/market-data/resolve-currency" },
@@ -1035,6 +1040,21 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       };
       url += `/${encodeURIComponent(id)}`;
       body = JSON.stringify(bodyPayload);
+      break;
+    }
+    case "get_asset_logo":
+    case "delete_asset_logo": {
+      const { assetId } = payload as { assetId: string };
+      url += `/${encodeURIComponent(assetId)}`;
+      break;
+    }
+    case "upsert_asset_logo": {
+      const { assetId, payload: logoPayload } = payload as {
+        assetId: string;
+        payload: Record<string, unknown>;
+      };
+      url += `/${encodeURIComponent(assetId)}`;
+      body = JSON.stringify(logoPayload);
       break;
     }
     case "update_quote_mode": {

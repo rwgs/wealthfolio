@@ -291,7 +291,7 @@
   "import_help_docs_activity_ref": "取引リファレンスのドキュメント",
   "import_help_how_to_title": "CSVのインポート方法",
   "import_help_how_to_mobile": "CSVのインポート方法",
-  "pagination_count": "{{fetched}} / {{total}}件の取引",
+  "pagination_count": "{{fetched}}/{{total}}件の取引",
   "manager": {
     "add_to_account": "{{account}}に新しい取引を追加",
     "create_transaction": "口座の新しい取引を作成します",
@@ -357,7 +357,8 @@
     "status_all": "すべての取引",
     "status_pending": "確認待ち",
     "status_validated": "検証済み",
-    "instrument": "商品"
+    "instrument": "商品",
+    "instrument_all": "すべての商品"
   },
   "detail": {
     "status_posted": "確定済み",
