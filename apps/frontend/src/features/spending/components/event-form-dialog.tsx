@@ -324,7 +324,7 @@ export function EventFormDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="min-w-0 space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -646,7 +646,7 @@ function SuggestedTransactions({
   }
 
   return (
-    <div className="border-input rounded-md border">
+    <div className="border-input overflow-hidden rounded-md border">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="min-w-0">
           <p className="text-foreground text-xs font-semibold">
@@ -697,8 +697,8 @@ function SuggestedTransactions({
                   onChange={(e) => onToggle(c.id, e.target.checked)}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-foreground truncate text-xs">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="text-foreground min-w-0 truncate text-xs">
                       {c.notes || c.activityType}
                     </span>
                     {c.eventId && checked && (

@@ -1942,6 +1942,7 @@ export interface CategoryAllocation {
   value: number; // Base currency value
   percentage: number; // 0-100
   children?: CategoryAllocation[]; // Child allocations for drill-down
+  isResidual?: boolean; // True for the synthetic "rest of the parent" drill-down child
 }
 
 export interface TaxonomyAllocation {
