@@ -186,7 +186,13 @@ describe("SymbolSearch", () => {
     expect(screen.getByTestId("asset-id")).toHaveTextContent("VWRPL");
     expect(screen.getByTestId("exchange-mic")).toHaveTextContent("BCXE");
     expect(screen.getByTestId("asset-name")).toHaveTextContent("Vanguard FTSE All-World UCITS ETF");
-    expect(resolveSymbolQuoteMock).toHaveBeenCalledWith("VWRPL", "BCXE", "EQUITY", undefined, "GBp");
+    expect(resolveSymbolQuoteMock).toHaveBeenCalledWith(
+      "VWRPL",
+      "BCXE",
+      "EQUITY",
+      undefined,
+      "GBp",
+    );
   });
 
   it("does not overwrite an existing asset quote currency with resolver output", async () => {
