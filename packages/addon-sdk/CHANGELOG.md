@@ -22,6 +22,15 @@ and this project adheres to
   setting. Requires a Wealthfolio release that ships this sandbox runtime
   (unreleased at the time of writing). See the
   [Addon Localization guide](../../docs/addons/addon-localization.md).
+- Optional `status` and `needsReview` fields on `ActivityCreate` and
+  `ActivityUpdate`.
+
+### Changed
+
+- `ActivityUpdate.asset` now has explicit patch semantics: omit it to preserve
+  the current asset, or pass an empty object to clear the asset association.
+- Host-provided `@wealthfolio/addon-sdk` and `@wealthfolio/ui` dependency ranges
+  are now `^3.8.0`.
 
 ## [3.7.0] - 2026-08-10
 

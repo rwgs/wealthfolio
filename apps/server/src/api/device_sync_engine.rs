@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::main_lib::AppState;
 use wealthfolio_core::events::DomainEvent;
-use wealthfolio_core::sync::{APP_SYNC_TABLES, SNAPSHOT_SCHEMA_VERSION};
+use wealthfolio_core::sync::{
+    snapshot_covers_cursor_and_schema, APP_SYNC_TABLES, SNAPSHOT_SCHEMA_VERSION,
+};
 use wealthfolio_device_sync::engine::{
     self, CredentialStore, OutboxStore, ReadyReconcileStore, ReplayEvent, ReplayStore,
     SyncIdentity, SyncTransport, TransportError,
@@ -1397,7 +1399,12 @@ pub async fn generate_snapshot_now(
             .get_latest_snapshot_with_cursor_fallback(&token, &device_id)
             .await
         {
-            if latest_snapshot.oplog_seq >= cursor {
+            if snapshot_covers_cursor_and_schema(
+                latest_snapshot.oplog_seq,
+                latest_snapshot.schema_version,
+                cursor,
+                SNAPSHOT_SCHEMA_VERSION,
+            ) {
                 return Ok(SyncSnapshotUploadResult {
                     status: "uploaded".to_string(),
                     snapshot_id: Some(latest_snapshot.snapshot_id),
@@ -1492,7 +1499,12 @@ pub async fn generate_snapshot_now(
                     .ok()
                     .flatten();
                 if let (Some(cursor), Some(snapshot)) = (local_cursor, latest) {
-                    if snapshot.oplog_seq >= cursor {
+                    if snapshot_covers_cursor_and_schema(
+                        snapshot.oplog_seq,
+                        snapshot.schema_version,
+                        cursor,
+                        SNAPSHOT_SCHEMA_VERSION,
+                    ) {
                         tracing::info!(
                             "[DeviceSync] Snapshot conflict resolved by existing remote snapshot id={} oplog_seq={} cursor={}",
                             snapshot.snapshot_id,
