@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
+import { TruncatedText } from "@/components/truncated-text";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import type { Account, TaxonomyCategory } from "@/lib/types";
@@ -406,8 +407,10 @@ export function CategoryTransactionsSheet({
                       className="hover:bg-muted/30 flex items-center gap-2.5 px-1 py-2 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="text-foreground truncate text-[13px] font-medium leading-tight">
-                          {it.notes ?? (
+                        <div className="text-foreground text-[13px] font-medium leading-tight">
+                          {it.notes != null ? (
+                            <TruncatedText text={it.notes} />
+                          ) : (
                             <span className="text-muted-foreground italic">
                               {it.activityType.toLowerCase()}
                             </span>
