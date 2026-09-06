@@ -85,6 +85,17 @@ pub const APP_SYNC_TABLES: &[&str] = &[
 /// bootstraps from a snapshot missing a table it expects.
 pub const SNAPSHOT_SCHEMA_VERSION: i32 = 2;
 
+/// A remote snapshot is reusable only when it covers the required event cursor
+/// and contains at least the schema required by the local client.
+pub fn snapshot_covers_cursor_and_schema(
+    snapshot_seq: i64,
+    snapshot_schema_version: i32,
+    required_seq: i64,
+    required_schema_version: i32,
+) -> bool {
+    snapshot_seq >= required_seq && snapshot_schema_version >= required_schema_version
+}
+
 /// Entity names used by incremental sync events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -303,7 +314,16 @@ pub trait EntitySyncAdapter: Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use super::{should_apply_lww, SyncEntity};
+    use super::{should_apply_lww, snapshot_covers_cursor_and_schema, SyncEntity};
+
+    #[test]
+    fn snapshot_reuse_requires_current_cursor_and_schema() {
+        assert!(snapshot_covers_cursor_and_schema(10, 2, 10, 2));
+        assert!(snapshot_covers_cursor_and_schema(11, 2, 10, 2));
+        assert!(snapshot_covers_cursor_and_schema(11, 3, 10, 2));
+        assert!(!snapshot_covers_cursor_and_schema(9, 2, 10, 2));
+        assert!(!snapshot_covers_cursor_and_schema(11, 1, 10, 2));
+    }
 
     #[test]
     fn lww_newer_timestamp_wins() {

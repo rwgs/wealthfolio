@@ -116,16 +116,20 @@ mod desktop {
     use super::*;
 
     /// Sets up the application menu and its event handler.
-    pub fn setup_menu(handle: &AppHandle) {
-        match menu::create_menu(handle) {
-            Ok(menu) => {
-                if let Err(e) = handle.set_menu(menu) {
-                    error!("Failed to set menu: {}", e);
+    pub fn setup_menu(handle: &AppHandle, menu_bar_visible: bool) {
+        if menu_bar_visible {
+            match menu::create_menu(handle) {
+                Ok(menu) => {
+                    if let Err(e) = handle.set_menu(menu) {
+                        error!("Failed to set menu: {}", e);
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to create menu: {}", e);
                 }
             }
-            Err(e) => {
-                error!("Failed to create menu: {}", e);
-            }
+        } else if let Err(e) = handle.remove_menu() {
+            error!("Failed to remove menu: {}", e);
         }
 
         handle.on_menu_event(move |app, event| {
@@ -178,7 +182,12 @@ mod desktop {
         });
 
         // Menu setup is synchronous (no I/O)
-        setup_menu(&handle);
+        let menu_bar_visible = context
+            .settings_service()
+            .get_settings()
+            .map(|s| s.menu_bar_visible)
+            .unwrap_or(true);
+        setup_menu(&handle, menu_bar_visible);
 
         // Notify frontend that app is ready
         // The frontend will trigger the initial portfolio update and update check after it's mounted
