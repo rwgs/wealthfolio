@@ -445,11 +445,11 @@ export interface SpendingAPI {
 
   /**
    * Re-run all categorization rules. Pass false to overwrite existing
-   * rule/AI/import-assigned categories too — the default only fills in
-   * currently uncategorized activities, preserving any existing manual or
-   * AI-assigned categories.
+   * rule/AI/history/import-assigned categories too — the default only fills in
+   * currently uncategorized activities. Manual assignments are always
+   * preserved.
    * @param onlyUncategorized Defaults to true
-   * @returns Promise resolving to the number of activities touched
+   * @returns Promise resolving to the number of activities matched by a rule
    */
   rerunRules(onlyUncategorized?: boolean): Promise<number>;
 }
