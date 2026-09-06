@@ -179,7 +179,7 @@ export interface Activity {
   assetId?: string; // NOW OPTIONAL for pure cash events
 
   // Classification
-  activityType: string; // Canonical type (closed set of 15)
+  activityType: string; // Canonical type (closed set of 14)
   activityTypeOverride?: string; // User override (never touched by sync)
   sourceType?: string; // Raw provider label (REI, DIV, etc.)
   subtype?: string; // Semantic variation (DRIP, STAKING_REWARD, etc.)
