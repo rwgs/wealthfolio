@@ -62,10 +62,13 @@ function HoldingRow({
   const subtitle = parsedOption
     ? formatOptionSubtitle(parsedOption, { ...numberFormatting, ...dateFormatting })
     : t("dashboard:holdings.shares", {
-        count: holding.quantity ?? 0,
-        formatted: formatting.formatDecimal(holding.quantity ?? 0, {
-          maximumFractionDigits: 3,
-        }),
+        // Force the plural form when hidden so the label does not leak a quantity of exactly 1.
+        count: isHidden ? 0 : (holding.quantity ?? 0),
+        formatted: isHidden
+          ? "••••"
+          : formatting.formatDecimal(holding.quantity ?? 0, {
+              maximumFractionDigits: 3,
+            }),
       });
   const avatarSymbol = parsedOption ? parsedOption.underlying : symbol;
   const marketValue = holding.marketValue?.base ?? 0;
