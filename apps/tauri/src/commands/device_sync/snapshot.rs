@@ -11,7 +11,9 @@ use uuid::Uuid;
 use crate::context::ServiceContext;
 use crate::events::{emit_portfolio_trigger_recalculate, PortfolioRequestPayload};
 use wealthfolio_core::quotes::MarketSyncMode;
-use wealthfolio_core::sync::{APP_SYNC_TABLES, SNAPSHOT_SCHEMA_VERSION};
+use wealthfolio_core::sync::{
+    snapshot_covers_cursor_and_schema, APP_SYNC_TABLES, SNAPSHOT_SCHEMA_VERSION,
+};
 use wealthfolio_device_sync::SyncState;
 
 use super::{
@@ -634,7 +636,12 @@ pub async fn generate_snapshot_now_internal(
             .get_latest_snapshot_with_cursor_fallback(&token, &device_id)
             .await
         {
-            if latest_snapshot.oplog_seq >= cursor {
+            if snapshot_covers_cursor_and_schema(
+                latest_snapshot.oplog_seq,
+                latest_snapshot.schema_version,
+                cursor,
+                SNAPSHOT_SCHEMA_VERSION,
+            ) {
                 info!(
                     "[DeviceSync] Reusing latest remote snapshot id={} oplog_seq={} for cursor={}",
                     latest_snapshot.snapshot_id, latest_snapshot.oplog_seq, cursor
@@ -765,7 +772,12 @@ pub async fn generate_snapshot_now_internal(
                     Err(_) => None,
                 };
                 if let (Some(cursor), Some(snapshot)) = (local_cursor, latest) {
-                    if snapshot.oplog_seq >= cursor {
+                    if snapshot_covers_cursor_and_schema(
+                        snapshot.oplog_seq,
+                        snapshot.schema_version,
+                        cursor,
+                        SNAPSHOT_SCHEMA_VERSION,
+                    ) {
                         info!(
                             "[DeviceSync] Snapshot conflict resolved by existing remote snapshot id={} oplog_seq={} cursor={}",
                             snapshot.snapshot_id, snapshot.oplog_seq, cursor
