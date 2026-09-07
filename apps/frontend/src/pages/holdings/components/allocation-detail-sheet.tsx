@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getHoldingsByAllocation } from "@/adapters";
 import { namedChild, namedChildren } from "@/lib/allocation-children";
 import { TickerAvatar } from "@/components/ticker-avatar";
+import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { HoldingType } from "@/lib/constants";
 import type {
   AccountScope,
@@ -49,6 +50,7 @@ export function AllocationDetailSheet({
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { isBalanceHidden } = useBalancePrivacy();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -271,6 +273,7 @@ export function AllocationDetailSheet({
                       <AmountDisplay
                         value={category.value}
                         currency={baseCurrency}
+                        isHidden={isBalanceHidden}
                         className="shrink-0 text-sm"
                       />
                       <span className="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
@@ -313,6 +316,7 @@ export function AllocationDetailSheet({
                                   <AmountDisplay
                                     value={child.value}
                                     currency={baseCurrency}
+                                    isHidden={isBalanceHidden}
                                     className="text-muted-foreground shrink-0 text-xs"
                                   />
                                   <span className="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
@@ -430,6 +434,7 @@ export function AllocationDetailSheet({
                           <AmountDisplay
                             value={holding.marketValue}
                             currency={baseCurrency}
+                            isHidden={isBalanceHidden}
                             className="text-sm font-medium"
                           />
                           <p className="text-muted-foreground text-xs">
