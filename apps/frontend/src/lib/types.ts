@@ -896,6 +896,8 @@ export interface QuoteUpdate {
 }
 
 export interface Settings {
+  /** Read-only restore state, absent on older backends. */
+  restoreReconnectRequired?: boolean;
   theme: string;
   font: string;
   language: string;
