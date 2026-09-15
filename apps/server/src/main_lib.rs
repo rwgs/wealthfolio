@@ -303,11 +303,10 @@ fn open_database(config: &Config, db_path: &str) -> anyhow::Result<db::DbAccess>
         db::EncryptionPolicy::Plaintext
     };
 
-    // Startup owns the database, so it is the one place allowed to clear the
-    // scratch directory of snapshots a crash left behind. The offline
-    // conversion command deliberately does not: it may be run while an instance
-    // is still serving, and would delete that instance's in-flight snapshots.
-    db::purge_scratch_dir(std::path::Path::new(db_path));
+    // build_state holds DatabaseOwner before reaching here, excluding other
+    // Wealthfolio instances using this database. Clear abandoned snapshot
+    // staging before this process starts operations that could create live files.
+    db::purge_scratch_dir(std::path::Path::new(db_path), database_root(db_path));
 
     let access = db::bootstrap(db_path, &provider, policy)?;
 
@@ -386,15 +385,18 @@ pub fn run_database_maintenance(encrypt: bool) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    let data_root = database_root(current.path()).to_string_lossy().into_owned();
+    // DatabaseOwner prevents this offline command from running alongside a
+    // serving instance for the same database. Clean abandoned staging before
+    // starting our own backup and conversion, whose files must remain intact.
+    db::purge_scratch_dir(
+        std::path::Path::new(current.path()),
+        std::path::Path::new(&data_root),
+    );
     // Migrations must be current before the file is copied: the candidate is a
     // logical copy of whatever schema the source has.
-    current.run_migrations()?;
-
-    let data_root = std::path::Path::new(current.path())
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .to_string_lossy()
-        .into_owned();
+    // Pre-migration backups retain source protection, including plaintext before encryption.
+    current.run_migrations_with_backup(&data_root, &database_owner)?;
 
     let request = if encrypt {
         db::maintenance::MaintenanceRequest::Enable {
@@ -423,6 +425,13 @@ pub fn run_database_maintenance(encrypt: bool) -> anyhow::Result<()> {
 /// Default location of the database when `WF_DB_PATH` is unset.
 pub const DEFAULT_DB_PATH: &str = "./db/app.db";
 
+fn database_root(db_path: &str) -> &std::path::Path {
+    std::path::Path::new(db_path)
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| std::path::Path::new("."))
+}
+
 pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
     let database_owner = Arc::new(db::DatabaseOwner::acquire(&config.db_path)?);
     // Ensure DATABASE_URL aligns with WF_DB_PATH so core picks the right file
@@ -430,10 +439,7 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
     let db_access = open_database(config, &config.db_path)?;
     let db_path = db_access.path().to_string();
     tracing::info!("Database path in use: {}", db_path);
-    let data_root_path = std::path::Path::new(&db_path)
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .to_path_buf();
+    let data_root_path = database_root(&db_path).to_path_buf();
 
     let resolved_secret_path = std::env::var("WF_SECRET_FILE")
         .ok()
@@ -451,7 +457,13 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         resolved_secret_path.to_string_lossy().to_string(),
     );
 
-    db_access.run_migrations()?;
+    let migration_access = db_access.clone();
+    let migration_owner = database_owner.clone();
+    let backup_root = data_root_path.to_string_lossy().into_owned();
+    tokio::task::spawn_blocking(move || {
+        migration_access.run_migrations_with_backup(&backup_root, &migration_owner)
+    })
+    .await??;
 
     let pool = db_access.create_pool_with_owner(database_owner.clone())?;
     let (sync_outbox_wake_sender, sync_outbox_wake_receiver) = tokio::sync::mpsc::channel(128);

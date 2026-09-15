@@ -177,6 +177,87 @@ impl DbAccess {
         Ok(Arc::new(pool))
     }
 
+    /// Back up an existing database once before applying the pending batch.
+    /// The caller must retain ownership until startup has finished.
+    pub fn run_migrations_with_backup(
+        &self,
+        backup_root: &str,
+        owner: &DatabaseOwner,
+    ) -> Result<()> {
+        owner.check_path(self.path())?;
+        let conn = self.connect_rusqlite()?;
+        // Inspect before Diesel's pending query, which creates its history table
+        // if missing. An empty database (including history only) is fresh.
+        let existing: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM sqlite_schema
+                 WHERE name NOT GLOB 'sqlite_*' AND name != '__diesel_schema_migrations')",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|error| DatabaseError::QueryFailed(error.to_string()))?;
+        if existing {
+            conn.prepare("SELECT version, run_on FROM __diesel_schema_migrations")
+                .map_err(|error| DatabaseError::MigrationFailed(format!(
+                    "Cannot read migration history for an existing database: {error}. No migrations were run."
+                )))?;
+        }
+        let pending = self
+            .connect()?
+            .pending_migrations(MIGRATIONS)
+            .map_err(|error| DatabaseError::MigrationFailed(error.to_string()))?;
+        if pending.is_empty() {
+            info!("No pending migrations to apply.");
+            return Ok(());
+        }
+
+        let backup = if existing {
+            // SQLCipher may return page_size as text; SQLite coerces it here.
+            let (pages, page_size): (u32, u32) = conn
+                .query_row(
+                    "SELECT page_count, page_size + 0
+                 FROM pragma_page_count(), pragma_page_size()",
+                    [],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .map_err(|error| DatabaseError::BackupFailed(error.to_string()))?;
+            let bytes = u64::from(pages) * u64::from(page_size);
+            drop(conn);
+            let directory = Path::new(backup_root).join("backups");
+            fs::create_dir_all(&directory).map_err(backup_failed)?;
+            space::require(&directory, bytes).map_err(backup_failed)?;
+            let path = snapshots::create(
+                self,
+                backup_root,
+                snapshots::SnapshotReason::BeforeMigration,
+            )
+            .map_err(|error| DatabaseError::BackupFailed(error.to_string()))?;
+            info!(
+                "Pre-migration backup retained at {} (protection: {})",
+                path.display(),
+                if self.is_encrypted() {
+                    "encrypted"
+                } else {
+                    "unencrypted"
+                },
+            );
+            Some(path)
+        } else {
+            drop(conn);
+            None
+        };
+
+        self.run_migrations().map_err(|error| match backup {
+            Some(path) => DatabaseError::MigrationFailed(format!(
+                "{error}. Pre-migration backup retained at {}",
+                path.display(),
+            ))
+            .into(),
+            None => error,
+        })
+    }
+
+    /// Low-level runner, also used by disposable import/reference databases.
     pub fn run_migrations(&self) -> Result<()> {
         info!("Running database migrations");
         let mut connection = self.connect()?;
@@ -187,11 +268,27 @@ impl DbAccess {
             PRAGMA journal_mode = WAL;
             PRAGMA busy_timeout = 5000;
             PRAGMA foreign_keys = OFF;
-            PRAGMA synchronous = OFF;
+            PRAGMA synchronous = FULL;
             PRAGMA cache_size = -64000;
-            PRAGMA temp_store = MEMORY;
         ",
             )
+            .map_err(StorageError::from)?;
+
+        // Plaintext desktop/server migrations can spill large statement journals
+        // and VACUUM scratch databases to disk instead of growing the heap.
+        // SQLCipher does not encrypt every transient file: encrypted DBs must
+        // keep MEMORY. Preserve mobile behavior too; Android forces it in its
+        // SQLite build, and FILE has not been validated on iOS. DEFAULT is also
+        // memory in our SQLCipher build, so plaintext must explicitly use FILE.
+        // Measurements/rationale: docs/architecture/database-migration-backup-validation.md
+        let temp_store =
+            if self.is_encrypted() || cfg!(any(target_os = "android", target_os = "ios")) {
+                "PRAGMA temp_store = MEMORY;"
+            } else {
+                "PRAGMA temp_store = FILE;"
+            };
+        connection
+            .batch_execute(temp_store)
             .map_err(StorageError::from)?;
 
         let migration_result: Result<Vec<String>> = connection
@@ -519,7 +616,7 @@ mod encryption_tests {
         let unrelated = scratch.join("user-folder");
         fs::create_dir(&unrelated).unwrap();
 
-        purge_scratch_dir(Path::new(&db));
+        purge_scratch_dir(Path::new(&db), dir.path());
 
         assert!(
             !leaked.exists(),
@@ -1346,24 +1443,25 @@ pub fn scratch_dir(app_data_dir: &str) -> Result<std::path::PathBuf> {
 
 /// Cleans scratch files and abandoned maintenance candidates.
 ///
-/// Snapshot files are plaintext copies of synced financial rows, deleted as soon
-/// as they are consumed — but a crash between the write and the delete leaves
+/// Device-sync scratch snapshots are plaintext copies of synced financial rows,
+/// deleted as soon as they are consumed — but a crash between write and delete leaves
 /// one behind, and unlike the system temp directory this one has no OS reaper.
 /// Nothing here is meant to outlive a process, so startup clears it. Best
 /// effort: a leftover file must never stop the app from opening.
 ///
-/// **Call this only when starting the process that owns the database.** The
-/// directory is shared by every process pointed at the same data root, and the
-/// files in it are live for the span of a snapshot export or restore. Purging
-/// from anything short-lived — the offline `db encrypt`/`db decrypt` command,
-/// say — deletes a running instance's in-flight snapshot out from under it.
-pub fn purge_scratch_dir(db_path: &Path) {
+/// **Call only while holding DatabaseOwner, before starting any operations.**
+/// Another instance can have live snapshot/export files in these directories;
+/// cleanup without ownership could delete them mid-operation. Offline maintenance
+/// may also clean here after acquiring ownership, before creating its own files.
+/// Backup staging lives under the explicit backup root; native database path
+/// overrides can place it on a different filesystem from database scratch.
+pub fn purge_scratch_dir(db_path: &Path, backup_root: &Path) {
     maintenance::purge_abandoned_candidates(db_path);
-    // Only private operation directories are recursive cleanup targets. Both
-    // callers hold DatabaseOwner before reaching startup cleanup.
+    // Only private operation directories are recursive cleanup targets.
+    // Callers hold DatabaseOwner before reaching startup cleanup.
     if let Some(root) = db_path.parent() {
         for (directory, prefix) in [
-            (root.join("backups"), ".snapshot-"),
+            (backup_root.join("backups"), ".snapshot-"),
             (root.join(SCRATCH_DIR_NAME), "portable-"),
         ] {
             if let Ok(entries) = fs::read_dir(directory) {
@@ -1716,3 +1814,6 @@ mod tests {
 
 #[cfg(test)]
 mod pool_lifetime_tests;
+
+#[cfg(test)]
+mod migration_backup_tests;

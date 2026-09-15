@@ -1492,6 +1492,7 @@
   "backup_reason_manual": "수동 백업",
   "backup_reason_before-restore": "복원 전",
   "backup_reason_before-maintenance": "암호화 변경 전",
+  "backup_reason_before-migration": "데이터베이스 업그레이드 전",
   "backup_reason_legacy": "이전 백업",
   "backup_restore_item": "{{filename}} 복원",
   "backup_export_item": "{{filename}} 내보내기",

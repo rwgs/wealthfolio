@@ -44,6 +44,27 @@ function mount() {
     </QueryClientProvider>,
   );
 }
+it("renders the opening screen during migration and mounts providers after readiness", async () => {
+  mocks.status
+    .mockResolvedValueOnce({ ready: false, error: null, canRecover: false })
+    .mockResolvedValue({ ready: true, error: null, canRecover: false });
+  mount();
+  await waitFor(() => expect(mocks.status).toHaveBeenCalledOnce());
+  expect(screen.getByRole("status")).toHaveTextContent(copy.recovery_opening);
+  expect(screen.queryByText("Portfolio mounted")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: copy.recovery_retry })).not.toBeInTheDocument();
+  await screen.findByText("Portfolio mounted");
+});
+
+it("shows a failed upgrade with its retained backup location", async () => {
+  const error = "Migration failed. Pre-migration backup retained at /backups/original.db";
+  mocks.status.mockResolvedValue({ ready: false, error, canRecover: true });
+  mount();
+  await screen.findByText(error);
+  expect(screen.queryByText("Portfolio mounted")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: copy.recovery_retry })).toBeInTheDocument();
+});
+
 it("keeps portfolio providers unmounted until startup succeeds", async () => {
   mocks.status.mockResolvedValue({ ready: true, error: null, canRecover: false });
   mount();

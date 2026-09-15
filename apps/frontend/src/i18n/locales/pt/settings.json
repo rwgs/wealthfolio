@@ -1558,6 +1558,7 @@
   "backup_reason_manual": "Backup manual",
   "backup_reason_before-restore": "Antes da restauração",
   "backup_reason_before-maintenance": "Antes de alterar a criptografia",
+  "backup_reason_before-migration": "Antes da atualização do banco de dados",
   "backup_reason_legacy": "Backup anterior",
   "backup_restore_item": "Restaurar {{filename}}",
   "backup_export_item": "Exportar {{filename}}",

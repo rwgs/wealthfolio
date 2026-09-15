@@ -1516,6 +1516,7 @@
   "backup_reason_manual": "手動備份",
   "backup_reason_before-restore": "還原前",
   "backup_reason_before-maintenance": "變更加密前",
+  "backup_reason_before-migration": "資料庫升級前",
   "backup_reason_legacy": "較早的備份",
   "backup_restore_item": "還原 {{filename}}",
   "backup_export_item": "匯出 {{filename}}",
