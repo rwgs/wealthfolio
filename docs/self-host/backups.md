@@ -25,6 +25,44 @@ changes the live database's encryption or makes the backup password an app login
 password. Wealthfolio cannot reset a lost backup password. Keep it in a password
 manager, separately from the exported file.
 
+## Automatic backups before database upgrades
+
+When an existing database has pending Diesel migrations, Wealthfolio saves one
+verified snapshot before running the whole batch. A release with several
+migrations still creates one snapshot per attempt. Fresh installations and
+databases already up to date do not create an automatic backup. Backup failure
+stops the upgrade before any migration runs.
+
+These snapshots appear as **Before database upgrade** in the backup list. Native
+desktop and mobile store them under the app data directory's `backups/`, even
+when desktop `DATABASE_URL` points elsewhere. Hosted servers use `backups/`
+beside `WF_DB_PATH`; a bare `app.db` uses the current directory. Backups are
+kept until manually deleted.
+
+Failed upgrades retain their snapshot and report its location. Relaunch retries
+the remaining migrations using Diesel's normal history tracking and can create
+another snapshot. Earlier successful migrations can already be committed. Stop a
+failing supervisor restart loop: repeated attempts can accumulate snapshots
+until free space prevents another backup. There is no automatic rollback or
+additional upgrade-state file.
+
+Snapshots retain the encryption they had when created. In particular, an
+automatic snapshot created before `db encrypt` remains **unencrypted** after
+conversion. Maintenance logs identify its location and protection. Enabling
+encryption does not encrypt or delete that historical snapshot.
+
+Upgrades temporarily use SQLite `synchronous=FULL`; everyday pooled connections
+continue using `NORMAL`. Upgrade startup takes additional time for copying,
+verification and durable writes. The space preflight allows the logical database
+size plus 16 MiB on the backup filesystem; migrations such as `VACUUM` can need
+additional working space. Keep the app open while upgrading. Native startup
+shows the existing opening screen while the backup runs.
+
+Recovery uses the existing flows below. Portable restore validation also runs
+migrations, so a deterministically broken migration can prevent restoration
+until the application is fixed. Failed mobile startup does not add access to
+private saved snapshots; keep portable exports outside the installation too.
+
 ## Save a backup and export it
 
 1. Open **Settings → Backup & Export → Backup & Restore**.

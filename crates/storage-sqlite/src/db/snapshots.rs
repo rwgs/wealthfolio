@@ -17,6 +17,7 @@ pub enum SnapshotReason {
     Manual,
     BeforeRestore,
     BeforeMaintenance,
+    BeforeMigration,
     Legacy,
 }
 
@@ -26,6 +27,7 @@ impl SnapshotReason {
             Self::Manual => "manual",
             Self::BeforeRestore => "before-restore",
             Self::BeforeMaintenance => "before-maintenance",
+            Self::BeforeMigration => "before-migration",
             Self::Legacy => "legacy",
         }
     }
@@ -52,7 +54,10 @@ pub(super) fn is_current_filename(name: &str) -> bool {
     parts.len() == 4
         && parts[0].len() == 8
         && parts[1].len() == 6
-        && matches!(parts[2], "manual" | "before-restore" | "before-maintenance")
+        && matches!(
+            parts[2],
+            "manual" | "before-restore" | "before-maintenance" | "before-migration"
+        )
         && parts[3].len() == 32
         && parts[3].bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -143,6 +148,10 @@ pub fn create(access: &DbAccess, root: &str, reason: SnapshotReason) -> anyhow::
     let candidate = work.path().join("candidate.db");
     let candidate_path = candidate.to_str().context("Invalid backup path")?;
     super::backup_database_to_file(access, candidate_path)?;
+    #[cfg(test)]
+    if CORRUPT_CANDIDATE.with(|value| value.replace(false)) {
+        fs::write(&candidate, b"damaged snapshot")?;
+    }
     let backup = DbAccess::new(candidate_path, access.key().cloned());
     let conn = backup.connect_rusqlite()?;
     super::maintenance::integrity_check(&conn)?;
@@ -204,6 +213,8 @@ pub fn list(root: &str, key: Option<Arc<DbEncryptionKey>>) -> anyhow::Result<Vec
             SnapshotReason::BeforeRestore
         } else if filename.contains("_before-maintenance_") {
             SnapshotReason::BeforeMaintenance
+        } else if filename.contains("_before-migration_") {
+            SnapshotReason::BeforeMigration
         } else if filename.contains("_manual_") {
             SnapshotReason::Manual
         } else {
@@ -223,6 +234,11 @@ pub fn list(root: &str, key: Option<Arc<DbEncryptionKey>>) -> anyhow::Result<Vec
             .then_with(|| b.filename.cmp(&a.filename))
     });
     Ok(snapshots)
+}
+
+#[cfg(test)]
+thread_local! {
+    pub(super) static CORRUPT_CANDIDATE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 #[cfg(test)]

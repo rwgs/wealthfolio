@@ -78,6 +78,52 @@ fn file_key_encrypts_and_decrypts_with_the_startup_derived_key() {
 }
 
 #[test]
+fn encrypt_with_pending_migrations_retains_and_reports_plaintext_backup_at_relative_root() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("app.db");
+    let access = DbAccess::plaintext(path.to_str().unwrap());
+    access.prepare().unwrap();
+    access.run_migrations().unwrap();
+    access.connect_rusqlite().unwrap().execute_batch(
+        "DROP TABLE asset_logos;
+         DELETE FROM __diesel_schema_migrations WHERE version >= '20260814000001';
+         INSERT INTO app_settings(setting_key, setting_value) VALUES ('cli_test', 'before upgrade');",
+    ).unwrap();
+    let output = cli(dir.path(), "encrypt")
+        .env("WF_DB_PATH", "app.db")
+        .env("WF_SECRET_KEY", KEY)
+        .output()
+        .unwrap();
+    let text = output_text(&output);
+    assert!(output.status.success(), "{text}");
+    let backups =
+        wealthfolio_storage_sqlite::db::snapshots::list(dir.path().to_str().unwrap(), None)
+            .unwrap();
+    assert_eq!(backups.len(), 1);
+    assert_eq!(backups[0].protection, "unencrypted");
+    assert!(text.contains(&backups[0].filename), "{text}");
+    assert!(text.contains("protection: unencrypted"), "{text}");
+    let snapshot = DbAccess::plaintext(
+        dir.path()
+            .join("backups")
+            .join(&backups[0].filename)
+            .to_str()
+            .unwrap(),
+    );
+    let conn = snapshot.connect_rusqlite().unwrap();
+    assert!(conn.prepare("SELECT * FROM asset_logos").is_err());
+    let value: String = conn
+        .query_row(
+            "SELECT setting_value FROM app_settings WHERE setting_key='cli_test'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(value, "before upgrade");
+    assert_ne!(&std::fs::read(path).unwrap()[..16], b"SQLite format 3\0");
+}
+
+#[test]
 fn bad_secret_inputs_fail_before_modifying_the_database() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("app.db");

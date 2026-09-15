@@ -143,55 +143,55 @@ mod desktop {
         let _ = handle.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
-    /// Performs synchronous setup on desktop: opens the database, sets up the
-    /// menu, and registers listeners.
-    pub fn setup(handle: AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    /// Opens the database asynchronously so the startup gate can render.
+    pub fn setup(handle: AppHandle) {
         // Embedded MCP server: clear any stale lock file from an unclean
         // shutdown before the runtime's workers may start it again.
         mcp::remove_stale_lock(&handle);
-
-        // Bring the database runtime up synchronously (required before any
-        // command can work). The runtime spawns every background worker and
-        // retains their handles.
-        let context = tauri::async_runtime::block_on(async {
-            handle
+        // Let the window render while the database opens. Database-dependent
+        // commands stay gated until initialization succeeds; DatabaseRuntime
+        // owns the background workers and retains their handles.
+        tauri::async_runtime::spawn(async move {
+            let context = handle
                 .state::<database::DatabaseRuntime>()
                 .initialize(&handle)
-                .await
-        });
-
-        // Menu setup is synchronous (no I/O)
-        let menu_bar_visible = context
-            .as_ref()
-            .ok()
-            .and_then(|context| context.settings_service().get_settings().ok())
-            .map(|s| s.menu_bar_visible)
-            .unwrap_or(true);
-        setup_menu(&handle, menu_bar_visible);
-
-        // Notify frontend that app is ready
-        // The frontend will trigger the initial portfolio update and update check after it's mounted
-        emit_app_ready(&handle);
-
-        match context {
-            Ok(context) => {
-                if portfolio_history_backfill_needed(&context) {
+                .await;
+            let menu_bar_visible = context
+                .as_ref()
+                .ok()
+                .and_then(|context| context.settings_service().get_settings().ok())
+                .map(|settings| settings.menu_bar_visible)
+                .unwrap_or(true);
+            let needs_backfill = match context {
+                Ok(context) => portfolio_history_backfill_needed(&context),
+                Err(error) => {
+                    // Keep the window open so a missing encryption key or failed
+                    // migration can be shown by the recovery gate. The runtime
+                    // retains the startup error and keeps database commands gated.
+                    error!("Failed to open the database: {}", error);
+                    false
+                }
+            };
+            let ready_handle = handle.clone();
+            // Install the native menu and its handlers once, on the main thread,
+            // after initialization has resolved the menu visibility setting.
+            if let Err(error) = handle.run_on_main_thread(move || {
+                setup_menu(&ready_handle, menu_bar_visible);
+                // Preserve readiness notifications on failure too; the recovery
+                // gate reads the runtime's stored status. On success, frontend
+                // startup hooks own the initial portfolio update and update check.
+                emit_app_ready(&ready_handle);
+                if needs_backfill {
                     emit_portfolio_trigger_recalculate(
-                        &handle,
+                        &ready_handle,
                         PortfolioRequestPayload::builder().build(),
                     );
                 }
+            }) {
+                error!("Failed to finish desktop setup: {}", error);
+                emit_app_ready(&handle);
             }
-            // Start anyway, as mobile does. Returning an error here aborts
-            // `Builder::build`, so the event loop never runs and the user gets a
-            // window-less exit with the reason only in a log file. A database
-            // that cannot be opened — an encrypted one whose key did not survive
-            // a machine migration, say — is exactly the case that needs to be
-            // *shown*; commands report it as unavailable until it is fixed.
-            Err(e) => error!("Failed to open the database: {}", e),
-        }
-
-        Ok(())
+        });
     }
 }
 
@@ -336,10 +336,7 @@ pub fn run() {
 
             // Platform-specific setup
             #[cfg(desktop)]
-            desktop::setup(handle).map_err(|e| {
-                error!("Desktop setup failed: {}", e);
-                e
-            })?;
+            desktop::setup(handle);
 
             #[cfg(mobile)]
             mobile::setup(handle);
