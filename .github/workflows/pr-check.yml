@@ -202,6 +202,7 @@ jobs:
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
           echo "NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          echo "RANLIB_aarch64_linux_android=$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - name: Initialize local Android build files
         run: |
