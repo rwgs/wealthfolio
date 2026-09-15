@@ -1492,6 +1492,7 @@
   "backup_reason_manual": "手动备份",
   "backup_reason_before-restore": "恢复前",
   "backup_reason_before-maintenance": "更改加密前",
+  "backup_reason_before-migration": "数据库升级前",
   "backup_reason_legacy": "早期备份",
   "backup_restore_item": "恢复 {{filename}}",
   "backup_export_item": "导出 {{filename}}",

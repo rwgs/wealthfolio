@@ -440,10 +440,13 @@ impl DatabaseRuntime {
             }
         }
 
-        // Startup owns the database, so it is the one place allowed to clear the
-        // scratch directory of snapshots a crash left behind.
+        // Ownership is already held and workers have not started, so abandoned
+        // snapshots can be cleared without deleting an in-flight operation's files.
         if purge_staging {
-            db::purge_scratch_dir(std::path::Path::new(&db_path));
+            db::purge_scratch_dir(
+                std::path::Path::new(&db_path),
+                std::path::Path::new(&self.app_data_dir),
+            );
         }
 
         // Native apps are opt-in: a database that does not exist yet is

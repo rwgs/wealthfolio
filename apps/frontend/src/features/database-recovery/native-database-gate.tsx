@@ -145,10 +145,11 @@ function NativeStartup({ children }: { children: ReactNode }) {
   if (!startupError || status.data?.maintenance)
     return (
       <main
-        className="bg-background text-foreground flex min-h-screen items-center justify-center p-6"
+        className="text-paper flex min-h-screen flex-col items-center justify-center gap-6 bg-[#09090b] p-6 text-center"
         role="status"
       >
-        {t("settings:recovery_opening")}
+        <img src="/logo-gold.png" alt="Wealthfolio" width={100} height={100} />
+        <p>{t("settings:recovery_opening")}</p>
       </main>
     );
 

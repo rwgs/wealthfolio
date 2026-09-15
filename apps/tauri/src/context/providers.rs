@@ -82,7 +82,13 @@ pub async fn initialize_context(
     access: &db::DbAccess,
     owner: Arc<db::DatabaseOwner>,
 ) -> Result<ContextInitResult, Box<dyn std::error::Error>> {
-    access.run_migrations()?;
+    let migration_access = access.clone();
+    let migration_owner = owner.clone();
+    let backup_root = app_data_dir.to_owned();
+    tauri::async_runtime::spawn_blocking(move || {
+        migration_access.run_migrations_with_backup(&backup_root, &migration_owner)
+    })
+    .await??;
 
     let pool = access.create_pool_with_owner(owner)?;
     initialize_with_pool(app_data_dir, pool).await

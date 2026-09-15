@@ -1516,6 +1516,7 @@
   "backup_reason_manual": "Manual backup",
   "backup_reason_before-restore": "Before restore",
   "backup_reason_before-maintenance": "Before encryption change",
+  "backup_reason_before-migration": "Before database upgrade",
   "backup_reason_legacy": "Earlier backup",
   "backup_restore_item": "Restore {{filename}}",
   "backup_export_item": "Export {{filename}}",
