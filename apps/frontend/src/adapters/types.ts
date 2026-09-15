@@ -114,6 +114,11 @@ export interface AddonNetworkRequest {
   headers?: Record<string, string>;
   body?: string;
   auth?: AddonNetworkAuth;
+  /**
+   * HTTP timeout through response-body completion, excluding the preceding DNS lookup.
+   * Positive integer seconds; defaults to 10 and is capped server-side at 120.
+   */
+  timeoutSecs?: number;
 }
 
 export interface AddonNetworkResponse {

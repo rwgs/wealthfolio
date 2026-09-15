@@ -21,12 +21,42 @@ async fn late_startup_failure_releases_database_users() {
         access_token_ttl: std::time::Duration::from_secs(3600),
         cookie_secure: wealthfolio_server::auth::CookieSecurePolicy::Never,
     });
+    let access = db::DbAccess::plaintext(&config.db_path);
+    access.run_migrations().unwrap();
+    access
+        .connect_rusqlite()
+        .unwrap()
+        .execute_batch(
+            "DROP TABLE asset_logos;
+         DELETE FROM __diesel_schema_migrations WHERE version='20260902000001';",
+        )
+        .unwrap();
 
     let error = match build_state(&config).await {
         Ok(_) => panic!("invalid authentication configuration must fail startup"),
         Err(error) => error,
     };
     assert!(error.to_string().contains("WF_AUTH_PASSWORD_HASH"));
+    assert_exclusive_access(&config.db_path);
+    let backups = db::snapshots::list(root.path().to_str().unwrap(), None).unwrap();
+    assert_eq!(
+        backups.len(),
+        1,
+        "startup backs up before initializing services"
+    );
+    access
+        .connect_rusqlite()
+        .unwrap()
+        .prepare("SELECT * FROM asset_logos")
+        .unwrap();
+    assert!(build_state(&config).await.is_err());
+    assert_eq!(
+        db::snapshots::list(root.path().to_str().unwrap(), None)
+            .unwrap()
+            .len(),
+        1,
+        "a later service failure must not repeat the completed upgrade"
+    );
     assert_exclusive_access(&config.db_path);
 }
 

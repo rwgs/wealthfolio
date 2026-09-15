@@ -684,7 +684,7 @@ mod tests {
                     assert_eq!(backups.len(), 1);
                     assert!(error.contains(backups[0].to_str().unwrap()));
                     let _owner = DatabaseOwner::acquire(current.path()).unwrap();
-                    super::super::purge_scratch_dir(Path::new(current.path()));
+                    super::super::purge_scratch_dir(Path::new(current.path()), dir.path());
                     let backup = probe(backups[0].to_str().unwrap(), Some(key.clone())).unwrap();
                     assert_eq!(backup.is_encrypted(), encrypted || operation == "enable");
                     assert_eq!(
@@ -761,7 +761,7 @@ mod tests {
             .unwrap()
             .starts_with(b"SQLite format 3\0"));
         let _owner = DatabaseOwner::acquire(current.path()).unwrap();
-        super::super::purge_scratch_dir(Path::new(current.path()));
+        super::super::purge_scratch_dir(Path::new(current.path()), dir.path());
         assert!(!candidate.exists());
         assert_eq!(fs::read(current.path()).unwrap(), original);
         assert_eq!(
@@ -1102,7 +1102,7 @@ mod tests {
         let scratch = super::super::scratch_dir_beside(Path::new(access.path())).unwrap();
         let legacy = scratch.join("app.db.maintenance-legacy.pre");
         backup_database_to_file(&access, legacy.to_str().unwrap()).unwrap();
-        super::super::purge_scratch_dir(Path::new(access.path()));
+        super::super::purge_scratch_dir(Path::new(access.path()), dir.path());
         assert!(!legacy.exists());
     }
 

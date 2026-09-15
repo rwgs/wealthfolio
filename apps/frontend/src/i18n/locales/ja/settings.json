@@ -1492,6 +1492,7 @@
   "backup_reason_manual": "手動バックアップ",
   "backup_reason_before-restore": "復元前",
   "backup_reason_before-maintenance": "暗号化設定の変更前",
+  "backup_reason_before-migration": "データベースのアップグレード前",
   "backup_reason_legacy": "以前のバックアップ",
   "backup_restore_item": "{{filename}} を復元",
   "backup_export_item": "{{filename}} をエクスポート",
