@@ -467,3 +467,13 @@ export interface AgentAuditQuery {
   /** Actor kinds to include (pat | local_token | desktop_bridge). */
   actorKinds?: string[];
 }
+
+export interface BackupImportPreview {
+  id: string;
+  summary: {
+    createdAt: string | null;
+    appVersion: string | null;
+    accountCount: number;
+    activityCount: number;
+  };
+}
