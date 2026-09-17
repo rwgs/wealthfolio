@@ -7,7 +7,7 @@
 
 use crate::database::DatabaseRuntime;
 
-use chrono::{NaiveDate, Utc};
+use chrono::NaiveDate;
 use log::error;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,7 @@ use wealthfolio_core::assets::{
     LinkLiabilityRequest as CoreLinkRequest, UpdateAssetDetailsRequest as CoreUpdateDetailsRequest,
     UpdateValuationRequest as CoreValuationRequest,
 };
+use wealthfolio_core::utils::time_utils::{parse_user_timezone_or_default, user_today};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request/Response DTOs (string-based for frontend serialization)
@@ -454,7 +455,7 @@ pub async fn get_net_worth(
         Some(d) => {
             NaiveDate::parse_from_str(&d, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?
         }
-        None => Utc::now().date_naive(),
+        None => user_today(parse_user_timezone_or_default(&context.get_timezone())),
     };
 
     let core_response = context
