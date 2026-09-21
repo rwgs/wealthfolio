@@ -1,3 +1,4 @@
+import { profileFetch } from "@/features/profiles/session";
 // Web adapter core - Internal invoke function, COMMANDS map, and helpers
 // This module exports invoke, logger, and platform constants for shared modules
 
@@ -171,6 +172,11 @@ export const COMMANDS: CommandMap = {
   check_quotes_import: { method: "POST", path: "/market-data/quotes/check" },
   import_quotes_csv: { method: "POST", path: "/market-data/quotes/import" },
   synch_quotes: { method: "POST", path: "/market-data/sync/history" },
+  reset_all_provider_history: {
+    method: "POST",
+    path: "/market-data/quotes/reset",
+  },
+  reset_provider_history: { method: "POST", path: "/market-data/quotes" },
   sync_market_data: { method: "POST", path: "/market-data/sync" },
   // Secrets
   set_secret: { method: "POST", path: "/secrets" },
@@ -1145,6 +1151,11 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       body = JSON.stringify({ quotes, overwriteExisting });
       break;
     }
+    case "reset_provider_history": {
+      const { assetId } = payload as { assetId: string };
+      url += `/${encodeURIComponent(assetId)}/reset`;
+      break;
+    }
     case "sync_market_data": {
       body = JSON.stringify(payload);
       break;
@@ -1802,10 +1813,11 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
     }
     // Wealthfolio Connect commands
     case "store_sync_session": {
-      const { refreshToken } = payload as {
+      const { refreshToken, confirmRebind } = payload as {
         refreshToken: string;
+        confirmRebind?: boolean;
       };
-      body = JSON.stringify({ refreshToken });
+      body = JSON.stringify({ refreshToken, confirmRebind });
       break;
     }
     case "list_devices":
@@ -2148,7 +2160,7 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
     }
   }
 
-  const res = await fetch(url, {
+  const res = await profileFetch(url, {
     method,
     headers,
     body,
@@ -2177,7 +2189,11 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       void 0;
     }
     console.error(`[Invoke] Command "${command}" failed: ${msg}`);
-    throw new Error(msg);
+    // The server's 408 timeout leaves owned reset tasks running; 5xx responses
+    // can also follow a committed reset whose completion failed.
+    throw Object.assign(new Error(msg), {
+      outcomeUnknown: res.status === 408 || res.status >= 500,
+    });
   }
   // Handle responses with no body (204 No Content, 202 Accepted, or empty 200)
   if (res.status === 204 || res.status === 202) {
