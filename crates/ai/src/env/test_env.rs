@@ -1607,6 +1607,13 @@ impl CategorizationRulesServiceTrait for MockCategorizationRulesService {
     ) -> anyhow::Result<Vec<wealthfolio_spending::categorization_rules::CategorizationRule>> {
         Ok(self.rules.clone())
     }
+
+    async fn create(
+        &self,
+        _new_rule: wealthfolio_spending::categorization_rules::NewCategorizationRule,
+    ) -> anyhow::Result<wealthfolio_spending::categorization_rules::CategorizationRule> {
+        unimplemented!("MockCategorizationRulesService::create")
+    }
 }
 
 impl Default for MockEnvironment {
