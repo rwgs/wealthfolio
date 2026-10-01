@@ -104,7 +104,7 @@ fn validate_merge_request(
             }
             Some(found) if found.currency_mismatch => {
                 return Err(invalid(format!(
-                    "{} quotes in {} on {} and {} on {}; merge it manually",
+                    "{} quotes in {} on {} and {} on {}, so the two records cannot be merged automatically",
                     found.survivor.symbol,
                     found.survivor.quote_ccy,
                     found.survivor.exchange_mic,
