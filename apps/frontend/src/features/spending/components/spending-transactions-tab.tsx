@@ -45,6 +45,7 @@ import { CashActivityForm } from "./cash-activity-form";
 import { ActivityForm } from "@/pages/activity/components/activity-form";
 import { MobileActivityForm } from "@/pages/activity/components/mobile-forms/mobile-activity-form";
 import { TransferMatchDialog } from "@/pages/activity/components/transfer-match-dialog";
+import { attachTransferCounterpart } from "@/pages/activity/utils/transfer-counterpart";
 import { ActivityLoanPaymentSheet } from "@/pages/asset/alternative-assets/components/activity-loan-payment-sheet";
 import { getActivityRestrictionLevel } from "@/lib/activity-restrictions";
 import { ActivityType } from "@/lib/constants";
@@ -788,11 +789,16 @@ export const SpendingTransactionsTab = forwardRef<SpendingTransactionsTabHandle>
     );
 
     const handleEditRow = useCallback(
-      (row: TransactionRowVM) => {
+      async (row: TransactionRowVM) => {
         if (isTransferCashActivity(row.activity)) {
           setEditingActivity(undefined);
           setShowForm(false);
-          setTransferFormActivity(toActivityDetails(row, accountById.get(row.activity.accountId)));
+          // Load the paired leg so the form pre-fills "To Account" (#1563).
+          setTransferFormActivity(
+            await attachTransferCounterpart(
+              toActivityDetails(row, accountById.get(row.activity.accountId)),
+            ),
+          );
           setShowTransferForm(true);
           return;
         }
