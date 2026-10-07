@@ -117,10 +117,11 @@ pub async fn delete_activity(
 #[tauri::command]
 pub async fn list_suppressed_activities(
     account_ids: Option<Vec<String>>,
-    state: State<'_, Arc<ServiceContext>>,
+    state: ProfileAccess,
 ) -> Result<Vec<SuppressedActivity>, String> {
+    let context = state.context()?;
     debug!("Listing suppressed activities...");
-    state
+    context
         .activity_service()
         .list_suppressed_activities(account_ids)
         .map_err(|e| e.to_string())
@@ -129,15 +130,16 @@ pub async fn list_suppressed_activities(
 #[tauri::command]
 pub async fn restore_suppressed_activities(
     deletion_ids: Vec<String>,
-    state: State<'_, Arc<ServiceContext>>,
+    state: ProfileAccess,
 ) -> Result<Vec<Activity>, String> {
+    let context = state.context()?;
     debug!("Restoring suppressed activities...");
-    let restored = state
+    let restored = context
         .activity_service()
         .restore_suppressed_activities(deletion_ids)
         .await
         .map_err(|e| e.to_string())?;
-    state.health_service().clear_cache().await;
+    context.health_service().clear_cache().await;
     Ok(restored)
 }
 

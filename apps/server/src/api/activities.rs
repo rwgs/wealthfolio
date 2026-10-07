@@ -174,7 +174,7 @@ struct RestoreSuppressedActivitiesRequest {
 }
 
 async fn list_suppressed_activities(
-    State(state): State<Arc<AppState>>,
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
     Query(query): Query<SuppressedActivityQuery>,
 ) -> ApiResult<Json<Vec<SuppressedActivity>>> {
     let account_ids = query.account_ids.map(|ids| {
@@ -191,7 +191,7 @@ async fn list_suppressed_activities(
 }
 
 async fn restore_suppressed_activities(
-    State(state): State<Arc<AppState>>,
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
     Json(request): Json<RestoreSuppressedActivitiesRequest>,
 ) -> ApiResult<Json<Vec<Activity>>> {
     let restored = state
