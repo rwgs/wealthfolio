@@ -105,6 +105,11 @@ or out (§8). Fixtures: EDGE-MIX-03, EDGE-MIX-05, EDGE-MIX-06.
 - The incoming leg flows the cost of every unit it delivered, the lots it opened
   and the units that covered a short, less its fee as capitalised into those
   lots.
+- A receiving lot's original-cost columns record its book cost on delivery,
+  including its capitalized fee. Checkpoints preserve that opening amount
+  separately from current cost, so later adjustments or disposals cannot change
+  the historical incoming flow. Its acquisition price, date, rates and purchase
+  charges retain the source lot's history.
 - Costs keep the sender's historical rates to the base currency, as opened lots
   do, whether or not a rate exists on the transfer day. A cover's proceeds in
   base are that delivered cost even when the covered short's own cost has no
@@ -240,14 +245,15 @@ rates and its source, so realized P&L in base follows from the lots relieved
   Fixtures: NOM-CB-03, EDGE-CB-06, EDGE-CB-07.
 - WAC (moving weighted average), as a pool, the way the UK's section 104 holding
   and Italy's _costo medio_ are kept:
-  - Before a disposal, a position's lots on the relieved side merge into one
-    pool: the lots no disposal has relieved join the lot a disposal has (the
-    pool), or the earliest of them forms it. The pool holds their units after
-    splits, their cost and charges, and their book cost in the account and base
-    currency (its rates are that book cost over its cost). It keeps the id of
-    the lot it formed from, so the disposals naming it stay valid, the earliest
-    acquisition date, and no source; what it holds when it forms is its
-    original, and its price is its cost less charges per unit.
+  - Before a disposal, or a return of capital (a disposal of no units, R7.4), a
+    position's lots on the relieved side merge into one pool: the lots no
+    disposal has relieved join the lot a disposal has (the pool), or the
+    earliest of them forms it. The pool holds their units after splits, their
+    cost and charges, and their book cost in the account and base currency (its
+    rates are that book cost over its cost). It keeps the id of the lot it
+    formed from, so the disposals naming it stay valid, the earliest acquisition
+    date, and no source; what it holds when it forms is its original, and its
+    price is its cost less charges per unit.
   - A disposal takes the same share of every lot it relieves, so the cost it
     relieves is the position's average cost, in its currency and in base, and
     the average after it is the average before it; a purchase re-averages at the
@@ -297,6 +303,104 @@ it (§5). Fixtures: every other fixture is FIFO.
 - A method is added with its entry here, hand-worked fixtures, and every
   property law passing under it (§9).
 
+**R7.4 Returns of capital and notional distributions.** These are per-account
+book-cost and performance calculations under the selected cost basis method. The
+user or broker supplies the distribution's classification; the engine does not
+determine taxable income or apply country-specific tax rules. Tax reporting may
+require different lot allocation, cross-account pooling or other adjustments
+(see §8).
+
+A return of capital pays back part of the investor's capital. It reduces book
+cost, and any amount beyond the remaining basis is recorded as realized P&L. A
+notional distribution records income reinvested without additional units: it
+increases both income and book cost by the entered amount. It is not a general
+basis correction, nor does it represent every non-cash tax event.
+
+Canadian fund distributions provide examples: a positive T3 box 42 amount
+reduces ACB, while a negative amount increases it. A reinvested distribution may
+issue and immediately consolidate units, leaving the holding's units unchanged.
+The CRA and IRS examples in the fixtures illustrate supported scenarios; they do
+not establish general tax compliance. The activities are recorded as:
+
+- DIVIDEND with subtype `RETURN_OF_CAPITAL`: a distribution paid in cash that is
+  capital. It books its cash as a dividend does and is no income; its fee and
+  tax are charges. It recovers its gross amount (cash plus fee and tax) of cost.
+- ADJUSTMENT with subtype `RETURN_OF_CAPITAL`: the capital part of distributions
+  already recorded as dividends, known later (box 42, a broker's cost-only ROC
+  row). No cash. It recovers its amount of cost and takes that amount out of
+  income.
+- ADJUSTMENT with subtype `NOTIONAL_DISTRIBUTION`: no cash and no units. It adds
+  its amount to cost and to income.
+
+Both adjustment subtypes require an asset on save and import. A malformed stored
+row without an asset is rejected by the fold and contributes no income. These
+subtypes accept spaces and hyphens in place of underscores, consistently in the
+engine and reporting readers; new saves use the canonical spelling. Unknown
+provider labels are preserved.
+
+How each moves cost:
+
+- The amount converts to the position's currency as a trade's price does (its
+  own rate when one side is the account's currency, else the day's). It acts on
+  the cost basis the account's method keeps. A return of capital is a disposal
+  of no units: under WAC the lots pool first where R7.2 permits it. Lots kept
+  separate for transfer or split history still form one basis pool in each
+  currency: the amount recovers their basis in proportion to book cost, with
+  only the pool's excess spread by units and realized. Thus nothing is realized
+  while the combined basis covers the amount. Under FIFO, LIFO and HIFO the
+  engine's allocation convention spreads it over the long lots by their units
+  after splits, so every unit's cost moves alike. A notional distribution is a
+  purchase of no units: like a purchase, it does not pool, and it spreads over
+  the long lots by units. Lots keep their order by cost per unit for HIFO (lots
+  a return of capital takes to zero then tie).
+- Each lot's cost moves by its share in the position's currency, and its book
+  cost in the account and base currency by the share at the distribution day's
+  rate. The CRA converts the ACB "using the exchange rate in effect at the time
+  the property was acquired and returns of capital were received", and a
+  reinvested distribution counts at its own date. The lot keeps that book cost
+  apart from its acquisition rates, so its purchase price and charges, and what
+  its purchase and charges cost in the account and base currency, stay as
+  bought. A receiving lot records its opening book cost separately (R2.4). A
+  disposal takes its units' share of the book cost. A transfer that covers an
+  opposite position divides those book costs between the covered and remaining
+  units. A capitalized transfer fee increases explicit book costs at the carried
+  acquisition rates, following the existing transfer-fee policy (R2.4). A zero
+  cost in one currency does not discard a nonzero cost in another; known zero
+  base cost remains valid for realized P&L.
+- Known distribution proceeds do not make an unknown acquisition base cost
+  known. Like an ordinary sale (R3.4), its base realized P&L remains zero when
+  either proceeds or relieved base cost is unknown; known proceeds are retained.
+- A return of capital realizes nothing while the basis covers it. When a share
+  exceeds the basis in either currency, the basis there goes to zero and the
+  excess is realized P&L, recorded as a disposal row with no units: its proceeds
+  are the share, its cost what the basis covered. With no units left (the
+  distribution's record date preceded a sale), all of it is realized P&L on the
+  lot the account's last disposal of the asset closed.
+- A notional distribution raises the cost and book cost by the share and
+  realizes nothing.
+- Neither moves units, net contribution or flows. Income moves by the amount:
+  down for a return of capital adjustment, not at all for a cash return of
+  capital, up for a notional distribution. The unrealized P&L the cost change
+  causes, plus any realized P&L, adds back to that, so the gain is the change in
+  value.
+- It is rejected, changing nothing in the fold or in performance (architecture
+  §4, per-activity atomicity), when the account has never held the asset (a
+  return of capital) or holds no units of it (a notional distribution), or when
+  the amount has no rate into the position's currency or, for a notional
+  distribution, into the account and base currency. A return of capital with no
+  day's rate into a currency reduces the book cost there with the cost, and its
+  base attribution is zero. Every reader follows the rejection: performance and
+  holdings income leave the activity out.
+- The asset page requests closed holdings too and uses their calculated income,
+  so a fully sold position follows the same reclassification and rejection
+  rules.
+- Fixtures: EDGE-ROC-01 to EDGE-ROC-05; and the Canadian worked examples
+  NOM-ACB-01 (the CRA's mutual fund ACB chart, with a T3 box 42 return of
+  capital), NOM-ACB-02 (the CRA's negative ACB example), NOM-ACB-03 (a phantom
+  distribution, and one paid as a return of capital) and NOM-ACB-04 (the ACB is
+  the pool's average). These single-account CAD examples illustrate average
+  basis; a taxpayer's ACB may require pooling across accounts.
+
 ## 8. Known limits
 
 - Holdings mode assumes trades and transfers happen at snapshot prices: a price
@@ -325,6 +429,13 @@ it (§5). Fixtures: every other fixture is FIFO.
   after FX moves the dearest lot in the base currency can be another. On a short
   position it closes the short sold at the highest price first, which realizes
   the most gain (R7.2).
+- Income reports list the dividends received. A DIVIDEND with subtype
+  `RETURN_OF_CAPITAL` is no income there either, but an ADJUSTMENT that later
+  reclassifies part of a dividend as capital does not change the dividend row it
+  reclassifies (R7.4).
+- A WAC pool formed after a return of capital that took its lots' cost below
+  their charges shows a negative price: a pool's price is its cost less charges
+  per unit (R7.2, R7.4).
 - WAC is per account: the same security in two WAC accounts is two pools.
   Jurisdictions that pool across accounts (Canada's ACB, France's PMP) or match
   later purchases (the UK's 30-day rule) need a tax report over all accounts

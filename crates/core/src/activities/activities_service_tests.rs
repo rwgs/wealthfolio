@@ -7064,6 +7064,54 @@ pub(crate) mod tests {
         assert!(error.to_string().contains("asset_id or symbol"));
     }
 
+    #[tokio::test]
+    async fn test_cost_basis_adjustment_without_asset_is_rejected() {
+        for subtype in ["RETURN_OF_CAPITAL", "NOTIONAL_DISTRIBUTION"] {
+            let account_service = Arc::new(MockAccountService::new());
+            account_service.add_account(create_test_account("acc-1", "USD"));
+            let activity_service = ActivityService::new(
+                Arc::new(MockActivityRepository::new()),
+                account_service,
+                Arc::new(MockAssetService::new()),
+                Arc::new(MockFxService::new()),
+                Arc::new(MockQuoteService),
+            );
+
+            let error = activity_service
+                .create_activity(NewActivity {
+                    id: Some("cost-adjustment".to_string()),
+                    account_id: "acc-1".to_string(),
+                    asset: None,
+                    activity_type: "ADJUSTMENT".to_string(),
+                    subtype: Some(subtype.to_string()),
+                    activity_date: "2024-01-15".to_string(),
+                    quantity: None,
+                    unit_price: None,
+                    currency: "USD".to_string(),
+                    fee: None,
+                    tax: None,
+                    amount: Some(dec!(12.5)),
+                    status: None,
+                    notes: None,
+                    fx_rate: None,
+                    metadata: None,
+                    needs_review: None,
+                    source_system: None,
+                    source_record_id: None,
+                    source_group_id: None,
+                    idempotency_key: None,
+                    import_run_id: None,
+                })
+                .await
+                .expect_err("a cost basis adjustment moves an asset's cost");
+
+            assert!(
+                error.to_string().contains("asset_id or symbol"),
+                "{subtype}: {error}"
+            );
+        }
+    }
+
     /// Test: Cash activity (WITHDRAWAL) has no asset_id
     #[tokio::test]
     async fn test_resolve_asset_id_cash_withdrawal_no_asset() {
@@ -9447,6 +9495,51 @@ pub(crate) mod tests {
         assert!(errors.contains_key("quoteCcy"));
         assert!(errors.contains_key("instrumentType"));
         assert!(!errors.contains_key("exchangeMic"));
+    }
+
+    #[tokio::test]
+    async fn test_import_rejects_cost_adjustments_without_asset_in_review_and_apply() {
+        for subtype in [
+            "RETURN_OF_CAPITAL",
+            "Return of Capital",
+            "NOTIONAL_DISTRIBUTION",
+            "notional-distribution",
+        ] {
+            let account_service = Arc::new(MockAccountService::new());
+            let account = create_test_account("acc-1", "USD");
+            account_service.add_account(account.clone());
+            let repository = Arc::new(MockActivityRepository::new());
+            let service = ActivityService::new(
+                repository.clone(),
+                account_service,
+                Arc::new(MockAssetService::new()),
+                Arc::new(MockFxService::new()),
+                Arc::new(MockQuoteService),
+            );
+            let row: ActivityImport = serde_json::from_value(json!({
+                "date": "2024-01-15", "symbol": "", "activityType": "ADJUSTMENT",
+                "currency": "USD", "amount": "20", "accountId": "acc-1",
+                "isDraft": false, "isValid": true, "subtype": subtype
+            }))
+            .unwrap();
+            let checked = service
+                .check_activities_import(vec![row.clone()])
+                .await
+                .unwrap();
+            assert!(!checked[0].is_valid, "{subtype}");
+            assert!(checked[0].errors.as_ref().unwrap().contains_key("symbol"));
+            let imported = service.import_activities(vec![row.clone()]).await.unwrap();
+            assert!(!imported.summary.success, "{subtype}");
+            assert_eq!(imported.summary.imported, 0);
+            assert!(repository.get_activities().unwrap().is_empty());
+            // Exercise ImportApply itself too: it must not use the cash-row exception.
+            let prepared = service
+                .prepare_activities_for_import(vec![NewActivity::from(row)], &account)
+                .await
+                .unwrap();
+            assert!(prepared.prepared.is_empty());
+            assert_eq!(prepared.errors.len(), 1, "{subtype}");
+        }
     }
 
     #[tokio::test]

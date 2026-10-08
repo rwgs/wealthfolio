@@ -1,5 +1,5 @@
 //! Stage 2: the single economics authority. Total over the 14-type ×
-//! 10-subtype vocabulary: every posted activity maps to one or two events
+//! 12-subtype vocabulary: every posted activity maps to one or two events
 //! (composites expand) or to a diagnostic. Cash resolution follows the
 //! final-cash contract: the stored `amount` is authoritative, never derived.
 
@@ -135,7 +135,7 @@ fn compile_leg(leg: &Leg, account: &AccountFacts, facts: &CanonicalFacts) -> Eco
     let action = action_for(activity, &mut diagnostics);
     let contribution = contribution_for(activity, facts);
     let flow = flow_for(activity, facts, multiplier, cash.as_ref(), &mut diagnostics);
-    let attribution = attribution_for(activity, account);
+    let attribution = attribution_for(activity, account, &action);
 
     EconomicEvent {
         id: leg.event_id.clone(),
@@ -347,10 +347,43 @@ fn action_for(activity: &Activity, diagnostics: &mut Vec<Diagnostic>) -> Action 
             ));
             Action::None
         }
+        (Adjustment, None)
+            if matches!(
+                activity.subtype,
+                Some(Subtype::ReturnOfCapital | Subtype::NotionalDistribution)
+            ) =>
+        {
+            diagnostics.push(Diagnostic::error(
+                DiagnosticCode::UnknownAsset,
+                activity.id.as_str(),
+                "cost basis adjustment requires an asset",
+            ));
+            Action::None
+        }
         (Adjustment, Some(asset)) if activity.subtype == Some(Subtype::OptionExpiry) => {
             Action::OptionExpiry {
                 asset,
                 quantity: activity.quantity,
+            }
+        }
+        (Adjustment, Some(asset)) if activity.subtype == Some(Subtype::ReturnOfCapital) => {
+            Action::ReturnOfCapital {
+                asset,
+                amount: activity.amount.unwrap_or_default().abs(),
+            }
+        }
+        (Adjustment, Some(asset)) if activity.subtype == Some(Subtype::NotionalDistribution) => {
+            Action::NotionalDistribution {
+                asset,
+                amount: activity.amount.unwrap_or_default().abs(),
+            }
+        }
+        // A distribution of capital: its gross amount, the cash plus what was
+        // withheld from it, is cost recovered.
+        (Dividend, Some(asset)) if activity.subtype == Some(Subtype::ReturnOfCapital) => {
+            Action::ReturnOfCapital {
+                asset,
+                amount: activity.amount.unwrap_or_default().abs() + activity.fee + activity.tax,
             }
         }
         _ => Action::None,
@@ -362,13 +395,19 @@ fn action_for(activity: &Activity, diagnostics: &mut Vec<Diagnostic>) -> Action 
 /// on deposits, withdrawals and transfers are booked but knowingly not
 /// attributed. Credit-card interest is a charge on a liability (its cash is
 /// negative), so its amount is attributed as a fee, never as income.
-fn attribution_for(activity: &Activity, account: &AccountFacts) -> Attributed {
+fn attribution_for(activity: &Activity, account: &AccountFacts, action: &Action) -> Attributed {
     use ActivityKind::*;
     let amount = activity.amount.unwrap_or(Decimal::ZERO);
     let (fee, tax) = (activity.fee, activity.tax);
     match activity.kind {
         Interest if account.kind == AccountKind::CreditCard => Attributed {
             fee: amount,
+            ..Attributed::default()
+        },
+        // Capital paid back, not income; what was withheld is still a charge.
+        Dividend if activity.subtype == Some(Subtype::ReturnOfCapital) => Attributed {
+            fee,
+            tax,
             ..Attributed::default()
         },
         Dividend | Interest => Attributed {
@@ -399,6 +438,18 @@ fn attribution_for(activity: &Activity, account: &AccountFacts) -> Attributed {
         },
         TransferIn | TransferOut if !activity.is_security_transfer => Attributed {
             tax,
+            ..Attributed::default()
+        },
+        // Each moves income by what it moves cost, so the unrealized P&L the
+        // cost change causes is no gain (rules R7.4): a return of capital
+        // takes capital back out of dividends already counted as income; a
+        // notional distribution is income reinvested as cost.
+        Adjustment if matches!(action, Action::ReturnOfCapital { .. }) => Attributed {
+            income: -amount.abs(),
+            ..Attributed::default()
+        },
+        Adjustment if matches!(action, Action::NotionalDistribution { .. }) => Attributed {
+            income: amount.abs(),
             ..Attributed::default()
         },
         _ => Attributed::default(),
@@ -638,6 +689,55 @@ mod tests {
             Action::Trade { unit_price, .. } => assert_eq!(*unit_price, dec!(25)),
             other => panic!("unexpected action {other:?}"),
         }
+    }
+
+    #[test]
+    fn returns_of_capital_recover_cost_and_notional_distributions_add_it() {
+        let mut dividend = raw("d", "a1", "DIVIDEND", "2025-01-02T10:00:00Z");
+        dividend.asset_id = Some("aapl".into());
+        dividend.subtype = Some("RETURN_OF_CAPITAL".into());
+        dividend.amount = Some(dec!(45));
+        dividend.tax = Some(dec!(5));
+        let mut adjustment = raw("r", "a1", "ADJUSTMENT", "2025-01-02T11:00:00Z");
+        adjustment.asset_id = Some("aapl".into());
+        adjustment.subtype = Some("return_of_capital".into());
+        adjustment.amount = Some(dec!(20));
+        let mut notional = raw("n", "a1", "ADJUSTMENT", "2025-01-02T12:00:00Z");
+        notional.asset_id = Some("aapl".into());
+        notional.subtype = Some("NOTIONAL_DISTRIBUTION".into());
+        notional.amount = Some(dec!(10));
+        let ledger = ledger(vec![dividend, adjustment, notional], "SECURITIES");
+        assert!(ledger.diagnostics.is_empty());
+
+        // A dividend of capital books its cash, recovers its gross amount
+        // and is no income; what was withheld is still a charge.
+        assert_eq!(ledger.events[0].cash.as_ref().unwrap().amount, dec!(45));
+        match &ledger.events[0].action {
+            Action::ReturnOfCapital { amount, .. } => assert_eq!(*amount, dec!(50)),
+            other => panic!("unexpected action {other:?}"),
+        }
+        assert_eq!(
+            ledger.events[0].attribution,
+            Attributed {
+                income: dec!(0),
+                fee: dec!(0),
+                tax: dec!(5),
+            }
+        );
+        // A return of capital adjustment books no cash and takes its amount
+        // back out of income; a notional distribution adds it.
+        assert!(ledger.events[1].cash.is_none());
+        match &ledger.events[1].action {
+            Action::ReturnOfCapital { amount, .. } => assert_eq!(*amount, dec!(20)),
+            other => panic!("unexpected action {other:?}"),
+        }
+        assert_eq!(ledger.events[1].attribution.income, dec!(-20));
+        assert!(ledger.events[2].cash.is_none());
+        match &ledger.events[2].action {
+            Action::NotionalDistribution { amount, .. } => assert_eq!(*amount, dec!(10)),
+            other => panic!("unexpected action {other:?}"),
+        }
+        assert_eq!(ledger.events[2].attribution.income, dec!(10));
     }
 
     #[test]
