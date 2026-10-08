@@ -44,7 +44,8 @@ use crate::accounts::{account_types, Account, AccountServiceTrait};
 use crate::activities::activities_constants::{
     classify_import_activity, is_cash_symbol, is_garbage_symbol, is_securities_transfer,
     requires_final_cash_amount, requires_symbol, ImportSymbolDisposition,
-    ACTIVITY_SUBTYPE_OPTION_EXPIRY, ACTIVITY_TYPE_ADJUSTMENT, ACTIVITY_TYPE_BUY,
+    ACTIVITY_SUBTYPE_NOTIONAL_DISTRIBUTION, ACTIVITY_SUBTYPE_OPTION_EXPIRY,
+    ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL, ACTIVITY_TYPE_ADJUSTMENT, ACTIVITY_TYPE_BUY,
     ACTIVITY_TYPE_CREDIT, ACTIVITY_TYPE_FEE, ACTIVITY_TYPE_INTEREST, ACTIVITY_TYPE_SELL,
     ACTIVITY_TYPE_SPLIT, ACTIVITY_TYPE_TAX, ACTIVITY_TYPE_TRANSFER_IN, ACTIVITY_TYPE_TRANSFER_OUT,
     ACTIVITY_TYPE_WITHDRAWAL, PRICE_BEARING_ACTIVITY_TYPES,
@@ -125,12 +126,50 @@ struct ResolvedSymbolInfo {
     exchange_mic: Option<String>,
 }
 
+/// What an update makes of a transfer leg when it turns it into a securities
+/// transfer: its direction, the security and the quantity moved.
+struct SecuritiesTransferLeg {
+    activity_type: String,
+    asset: String,
+    quantity: Decimal,
+}
+
+impl SecuritiesTransferLeg {
+    fn from_update(update: &ActivityUpdate) -> Option<Self> {
+        let asset_input = update.asset.as_ref()?;
+        let asset = asset_input
+            .id
+            .as_deref()
+            .or(asset_input.symbol.as_deref())
+            .map(str::trim)
+            .filter(|asset| !asset.is_empty())?;
+        if !is_securities_transfer(&update.activity_type, Some(asset)) {
+            return None;
+        }
+        let quantity = update
+            .quantity
+            .flatten()
+            .filter(|quantity| !quantity.is_zero())?;
+        Some(Self {
+            activity_type: update.activity_type.clone(),
+            asset: asset.to_uppercase(),
+            quantity: quantity.abs(),
+        })
+    }
+
+    /// Whether the two legs are the opposite sides of one securities transfer.
+    fn pairs_with(&self, other: &Self) -> bool {
+        self.activity_type != other.activity_type
+            && self.asset == other.asset
+            && self.quantity == other.quantity
+    }
+}
+
 struct InternalPairValues {
     source_amount: Decimal,
     destination_amount: Decimal,
     source_currency: String,
     destination_currency: String,
-    fx_rate: Option<Decimal>,
 }
 
 /// Service for managing activities
@@ -819,7 +858,10 @@ impl ActivityService {
         quantity: Option<Decimal>,
         unit_price: Option<Decimal>,
     ) -> ImportSymbolDisposition {
-        if NewActivity::is_asset_backed_income_subtype(activity_type, subtype) {
+        if NewActivity::is_asset_backed_income_subtype(activity_type, subtype)
+            || (activity_type.eq_ignore_ascii_case(ACTIVITY_TYPE_ADJUSTMENT)
+                && Self::requires_asset_identity(activity_type, subtype))
+        {
             ImportSymbolDisposition::ResolveAsset
         } else {
             classify_import_activity(activity_type, symbol, quantity, unit_price)
@@ -828,8 +870,15 @@ impl ActivityService {
 
     fn requires_asset_identity(activity_type: &str, subtype: Option<&str>) -> bool {
         if activity_type.eq_ignore_ascii_case(ACTIVITY_TYPE_ADJUSTMENT) {
-            return subtype.is_some_and(|subtype| {
-                subtype.eq_ignore_ascii_case(ACTIVITY_SUBTYPE_OPTION_EXPIRY)
+            let subtype = NewActivity::canonicalize_subtype_for_activity(activity_type, subtype);
+            return subtype.as_deref().is_some_and(|subtype| {
+                [
+                    ACTIVITY_SUBTYPE_OPTION_EXPIRY,
+                    ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL,
+                    ACTIVITY_SUBTYPE_NOTIONAL_DISTRIBUTION,
+                ]
+                .iter()
+                .any(|known| subtype.eq_ignore_ascii_case(known))
             });
         }
         requires_symbol(activity_type)
@@ -1730,8 +1779,8 @@ impl ActivityService {
             .filter(|amount| amount.is_sign_positive() && !amount.is_zero())
             .ok_or_else(|| Self::invalid_activity_data("Source amount must be greater than 0"))?;
 
-        let source_currency = request.source_currency.trim().to_uppercase();
-        let destination_currency = request.destination_currency.trim().to_uppercase();
+        let source_currency = request.source_currency.trim();
+        let destination_currency = request.destination_currency.trim();
         if source_currency.is_empty() {
             return Err(Self::invalid_activity_data("Source currency is required"));
         }
@@ -1741,51 +1790,43 @@ impl ActivityService {
             ));
         }
 
-        let from_account = self.account_service.get_account(&request.from_account_id)?;
-        let to_account = self.account_service.get_account(&request.to_account_id)?;
-        if !from_account.currency.eq_ignore_ascii_case(&source_currency) {
-            return Err(Self::invalid_activity_data(format!(
-                "Source currency must match source account currency ({})",
-                from_account.currency
-            )));
-        }
-        if !to_account
-            .currency
-            .eq_ignore_ascii_case(&destination_currency)
-        {
-            return Err(Self::invalid_activity_data(format!(
-                "Destination currency must match destination account currency ({})",
-                to_account.currency
-            )));
-        }
+        self.account_service.get_account(&request.from_account_id)?;
+        self.account_service.get_account(&request.to_account_id)?;
+
+        // Normalize units together with amounts, before uppercasing (GBp != GBP).
+        let (source_amount, source_currency) = normalize_amount(source_amount, source_currency);
+        let (requested_destination_amount, destination_currency) = normalize_amount(
+            request.destination_amount.unwrap_or_default(),
+            destination_currency,
+        );
+        let source_currency = source_currency.to_uppercase();
+        let destination_currency = destination_currency.to_uppercase();
 
         let destination_amount = if source_currency == destination_currency {
             source_amount
         } else {
-            request
-                .destination_amount
+            Some(requested_destination_amount)
                 .filter(|amount| amount.is_sign_positive() && !amount.is_zero())
                 .ok_or_else(|| {
                     Self::invalid_activity_data("Destination amount must be greater than 0")
                 })?
         };
 
-        let fx_rate = if source_currency == destination_currency {
-            None
-        } else {
-            match request.fx_rate {
-                Some(rate) if rate.is_sign_positive() && !rate.is_zero() => Some(rate),
-                Some(_) => return Err(Self::invalid_activity_data("FX rate must be positive")),
-                None => Some(destination_amount / source_amount),
-            }
-        };
+        // Legacy callers may send an execution-rate hint. The two cash amounts
+        // are authoritative; this is NOT an activity-to-account valuation rate.
+        if source_currency != destination_currency
+            && request
+                .fx_rate
+                .is_some_and(|rate| !rate.is_sign_positive() || rate.is_zero())
+        {
+            return Err(Self::invalid_activity_data("FX rate must be positive"));
+        }
 
         Ok(InternalPairValues {
             source_amount,
             destination_amount,
-            source_currency: from_account.currency,
-            destination_currency: to_account.currency,
-            fx_rate,
+            source_currency,
+            destination_currency,
         })
     }
 
@@ -1842,7 +1883,7 @@ impl ActivityService {
                 amount: Some(values.destination_amount),
                 status: None,
                 notes: request.notes.clone(),
-                fx_rate: values.fx_rate,
+                fx_rate: None,
                 metadata,
                 needs_review: None,
                 source_system: Some("MANUAL".to_string()),
@@ -1855,15 +1896,24 @@ impl ActivityService {
     }
 
     fn build_internal_pair_updates(
+        &self,
         request: &InternalTransferPairRequest,
-        transfer_out_id: String,
-        transfer_in_id: String,
+        pair: &TransferPair,
         values: &InternalPairValues,
-    ) -> Vec<ActivityUpdate> {
+    ) -> Result<Vec<ActivityUpdate>> {
         let metadata = Self::internal_transfer_metadata();
-        vec![
+        // Preserve user valuation overrides only while their currency pair is unchanged.
+        let valuation_rate_patch = |existing: &Activity, account_id: &str, currency: &str| {
+            let old_account = self.account_service.get_account(&existing.account_id)?;
+            let new_account = self.account_service.get_account(account_id)?;
+            Ok::<_, Error>(
+                (existing.currency != currency || old_account.currency != new_account.currency)
+                    .then_some(None),
+            )
+        };
+        Ok(vec![
             ActivityUpdate {
-                id: transfer_out_id,
+                id: pair.transfer_out.id.clone(),
                 account_id: request.from_account_id.clone(),
                 asset: None,
                 activity_type: ACTIVITY_TYPE_TRANSFER_OUT.to_string(),
@@ -1878,11 +1928,15 @@ impl ActivityService {
                 status: None,
                 needs_review: None,
                 notes: request.notes.clone(),
-                fx_rate: None,
+                fx_rate: valuation_rate_patch(
+                    &pair.transfer_out,
+                    &request.from_account_id,
+                    &values.source_currency,
+                )?,
                 metadata: metadata.clone(),
             },
             ActivityUpdate {
-                id: transfer_in_id,
+                id: pair.transfer_in.id.clone(),
                 account_id: request.to_account_id.clone(),
                 asset: None,
                 activity_type: ACTIVITY_TYPE_TRANSFER_IN.to_string(),
@@ -1897,10 +1951,31 @@ impl ActivityService {
                 status: None,
                 needs_review: None,
                 notes: request.notes.clone(),
-                fx_rate: Some(values.fx_rate),
+                fx_rate: valuation_rate_patch(
+                    &pair.transfer_in,
+                    &request.to_account_id,
+                    &values.destination_currency,
+                )?,
                 metadata,
             },
-        ]
+        ])
+    }
+
+    fn validate_internal_cash_pair_currency_update(
+        update: &ActivityUpdate,
+        existing: &Activity,
+        pair: &TransferPair,
+    ) -> Result<()> {
+        if Self::is_cash_transfer_pair(pair)
+            && pair.transfer_out.account_id != pair.transfer_in.account_id
+            && (update.account_id != existing.account_id
+                || (!update.currency.is_empty() && update.currency != existing.currency))
+        {
+            return Err(Self::invalid_activity_data(
+                "Use the transfer pair editor to change transfer accounts or currencies",
+            ));
+        }
+        Ok(())
     }
 
     fn build_counterpart_update(
@@ -1960,6 +2035,35 @@ impl ActivityService {
         };
 
         if !Self::is_cash_transfer_pair(pair) {
+            return Ok(Some(counterpart_update));
+        }
+
+        if pair.transfer_out.account_id != pair.transfer_in.account_id {
+            // Grid saves can echo the original amount. A notes/rate-only edit
+            // must not recalculate the other leg using a rounded ratio.
+            if existing.amount.map(|value| value.abs()) == Some(amount.abs()) {
+                return Ok(Some(counterpart_update));
+            }
+            let counterpart_amount = if existing.currency == counterpart.currency {
+                Some(amount.abs())
+            } else {
+                existing
+                    .amount
+                    .zip(counterpart.amount)
+                    .filter(|(source, destination)| !source.is_zero() && !destination.is_zero())
+                    .and_then(|(source, destination)| {
+                        amount
+                            .abs()
+                            .checked_mul(destination.abs())?
+                            .checked_div(source.abs())
+                    })
+            }
+            .ok_or_else(|| {
+                Self::invalid_activity_data(
+                    "Cross-currency transfer amount updates require valid existing amounts",
+                )
+            })?;
+            counterpart_update.amount = Some(Some(counterpart_amount));
             return Ok(Some(counterpart_update));
         }
 
@@ -4809,7 +4913,10 @@ impl ActivityServiceTrait for ActivityService {
 
         let pair = self.load_internal_transfer_pair_for_activity(&activity.id)?;
         let counterpart_update = match pair.as_ref() {
-            Some(pair) => self.build_counterpart_update(&activity, &existing, pair)?,
+            Some(pair) => {
+                Self::validate_internal_cash_pair_currency_update(&activity, &existing, pair)?;
+                self.build_counterpart_update(&activity, &existing, pair)?
+            }
             None => None,
         };
 
@@ -5149,12 +5256,7 @@ impl ActivityServiceTrait for ActivityService {
                 old_activities.push(activity.clone());
             }
 
-            let mut updates = Self::build_internal_pair_updates(
-                &request,
-                transfer_out_id,
-                transfer_in_id,
-                &pair_values,
-            );
+            let mut updates = self.build_internal_pair_updates(&request, &pair, &pair_values)?;
             for update in &mut updates {
                 let existing = self.activity_repository.get_activity(&update.id)?;
                 self.hydrate_and_validate_update_against_existing(update, &existing)?;
@@ -5306,6 +5408,13 @@ impl ActivityServiceTrait for ActivityService {
             .iter()
             .map(|update| update.id.clone())
             .collect();
+        let securities_legs: HashMap<String, SecuritiesTransferLeg> = request
+            .updates
+            .iter()
+            .filter_map(|update| {
+                SecuritiesTransferLeg::from_update(update).map(|leg| (update.id.clone(), leg))
+            })
+            .collect();
         let mut update_requests: Vec<ActivityUpdate> = Vec::new();
         for update_request in request.updates {
             match self.activity_repository.get_activity(&update_request.id) {
@@ -5318,6 +5427,27 @@ impl ActivityServiceTrait for ActivityService {
                         } else {
                             pair.transfer_in.id.clone()
                         };
+                        // The pair editor converts a cash pair to a securities
+                        // transfer by updating both legs together; that is a
+                        // complete pair edit, not a single-leg one.
+                        let converts_pair_to_securities = securities_legs
+                            .get(&update_request.id)
+                            .zip(securities_legs.get(&counterpart_id))
+                            .is_some_and(|(leg, counterpart)| leg.pairs_with(counterpart));
+                        if !converts_pair_to_securities {
+                            if let Err(err) = Self::validate_internal_cash_pair_currency_update(
+                                &update_request,
+                                &existing,
+                                &pair,
+                            ) {
+                                errors.push(ActivityBulkMutationError {
+                                    id: Some(update_request.id.clone()),
+                                    action: "update".to_string(),
+                                    message: err.to_string(),
+                                });
+                                continue;
+                            }
+                        }
 
                         if !explicit_update_ids.contains(&counterpart_id) {
                             match self.build_counterpart_update(&update_request, &existing, &pair) {

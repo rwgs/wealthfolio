@@ -2388,6 +2388,8 @@ impl ActivityRepositoryTrait for ActivityRepository {
 
         // Stored amount is final cash. Income reporting reverses charges to
         // gross income and never reconstructs a missing amount from quotes.
+        // A dividend of capital (RETURN_OF_CAPITAL) is no income: it reduces
+        // the asset's cost basis (engine rules R7.4).
         // IDs are internal UUIDs — safe to interpolate directly; escape single quotes defensively.
         let account_filter = match account_ids {
             Some(ids) if !ids.is_empty() => {
@@ -2422,6 +2424,8 @@ impl ActivityRepositoryTrait for ActivityRepository {
              INNER JOIN accounts acc ON a.account_id = acc.id
              WHERE {effective_type}
                    IN ('DIVIDEND', 'INTEREST', 'OTHER_INCOME')
+             AND NOT ({effective_type} = 'DIVIDEND'
+                      AND UPPER(REPLACE(REPLACE(TRIM(COALESCE(a.subtype, '')), ' ', '_'), '-', '_')) = 'RETURN_OF_CAPITAL')
              AND a.status = 'POSTED'
              AND acc.is_archived = 0
              {account_filter}
@@ -4957,6 +4961,60 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn income_report_leaves_out_a_dividend_of_capital() {
+        // Engine rules R7.4: a return of capital is no income.
+        let (pool, writer) = setup_db();
+        let repo = ActivityRepository::new(pool.clone(), writer);
+        let mut conn = get_connection(&pool).expect("conn");
+        insert_account(&mut conn, "acc-income");
+        insert_activity_with_subtype(&mut conn, "plain", "acc-income", "DIVIDEND", None, None);
+        insert_activity_with_subtype(
+            &mut conn,
+            "capital",
+            "acc-income",
+            "DIVIDEND",
+            None,
+            Some("return_of_capital"),
+        );
+        // Legacy labels are normalized by readers without rewriting stored rows.
+        for (id, label) in [
+            ("spaced", "Return of Capital"),
+            ("hyphenated", "return-of-capital"),
+        ] {
+            insert_activity_with_subtype(
+                &mut conn,
+                id,
+                "acc-income",
+                "DIVIDEND",
+                None,
+                Some(label),
+            );
+        }
+        insert_activity_with_subtype(
+            &mut conn,
+            "drip",
+            "acc-income",
+            "DIVIDEND",
+            None,
+            Some("DRIP"),
+        );
+
+        for (id, amount) in [("capital", "7"), ("drip", "3")] {
+            diesel::update(activities::table.find(id))
+                .set(activities::amount.eq(Some(amount.to_string())))
+                .execute(&mut conn)
+                .expect("amount");
+        }
+
+        let rows = repo
+            .get_income_activities_data(Some(&[String::from("acc-income")]))
+            .expect("income data");
+        let mut amounts: Vec<Decimal> = rows.iter().map(|row| row.amount).collect();
+        amounts.sort_unstable();
+        assert_eq!(amounts, vec![Decimal::from(3), Decimal::from(100)]);
+    }
+
+    #[tokio::test]
     async fn edits_store_type_overrides_as_they_read() {
         let (pool, writer) = setup_db();
         let repo = ActivityRepository::new(pool.clone(), writer);
@@ -6887,6 +6945,38 @@ mod tests {
             idempotency_key: None,
             import_run_id: None,
         }
+    }
+
+    #[tokio::test]
+    async fn create_refuses_cost_adjustments_without_an_asset() {
+        let (pool, writer) = setup_db();
+        let repo = ActivityRepository::new(pool.clone(), writer);
+        insert_account(&mut get_connection(&pool).expect("conn"), "acc-floor");
+        for subtype in [
+            "RETURN_OF_CAPITAL",
+            "Return of Capital",
+            "notional-distribution",
+        ] {
+            let mut activity = qa_floor_new_activity("ADJUSTMENT");
+            activity.subtype = Some(subtype.to_string());
+            activity.amount = Some(Decimal::new(20, 0));
+            let error = repo
+                .create_activities(vec![activity.clone()])
+                .await
+                .expect_err("batch create requires an asset");
+            assert!(error.to_string().contains("asset_id or symbol"));
+            let error = repo
+                .create_activity(activity)
+                .await
+                .expect_err("single create requires an asset");
+            assert!(error.to_string().contains("asset_id or symbol"));
+        }
+        use crate::schema::activities::dsl::activities;
+        let count: i64 = activities
+            .count()
+            .get_result(&mut get_connection(&pool).expect("conn"))
+            .expect("count activities");
+        assert_eq!(count, 0);
     }
 
     /// The repository floor: a POSTED cash-bearing row with no amount and no
