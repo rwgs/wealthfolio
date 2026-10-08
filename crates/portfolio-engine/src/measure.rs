@@ -1889,9 +1889,10 @@ fn activity_effects(
 }
 
 /// Disposals of the period whose disposing event realizes (a trade, an
-/// option's expiry, or units a transfer delivered into a short) and is dated
-/// inside the period. The previous calculator kept trades only, which left
-/// out the P&L of an expiry or a transfer cover.
+/// option's expiry, units a transfer delivered into a short, or a return of
+/// capital, rules R7.4) and is dated inside the period. The previous
+/// calculator kept trades only, which left out the P&L of an expiry or a
+/// transfer cover.
 fn period_disposals<'a>(
     inputs: &'a MeasureInputs<'a>,
     result: &PerformanceResult,
@@ -1918,6 +1919,15 @@ fn period_disposals<'a>(
 
 fn realized_effects(inputs: &MeasureInputs<'_>, disposals: &[&LotDisposal]) -> EffectSet {
     let base = inputs.base().as_str();
+    // Adjustments can legitimately exhaust foreign book cost while local
+    // cost remains. The lot's acquisition FX distinguishes that known zero
+    // from a disposal whose original basis never converted.
+    let known_acquisition: HashSet<_> = inputs
+        .lots
+        .iter()
+        .filter(|lot| lot.fx_rate_to_base > Decimal::ZERO)
+        .map(|lot| (&lot.account, lot.id.as_str()))
+        .collect();
     let mut set = EffectSet::default();
     for disposal in disposals {
         let foreign = !disposal.currency.as_str().eq_ignore_ascii_case(base);
@@ -1933,7 +1943,9 @@ fn realized_effects(inputs: &MeasureInputs<'_>, disposals: &[&LotDisposal]) -> E
                 && disposal.cost_basis_base.is_sign_positive());
         if foreign
             && !disposal.cost_basis.is_zero()
-            && (disposal.cost_basis_base.is_zero() || sign_mismatch)
+            && ((disposal.cost_basis_base.is_zero()
+                && !known_acquisition.contains(&(&disposal.account, disposal.lot_id.as_str())))
+                || (!disposal.cost_basis_base.is_zero() && sign_mismatch))
         {
             set.warnings
                 .push(QualityNote::RealizedSkippedAcquisitionFx {
