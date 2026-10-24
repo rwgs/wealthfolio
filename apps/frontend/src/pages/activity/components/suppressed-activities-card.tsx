@@ -85,7 +85,7 @@ export function SuppressedActivitiesCard() {
             <DialogTitle>{t("activity:suppressed.title")}</DialogTitle>
             <DialogDescription>{t("activity:suppressed.description")}</DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-80 pr-2">
+          <ScrollArea className="max-h-80 pe-2">
             <ul className="space-y-2">
               {suppressed.map((entry) => (
                 <li
@@ -118,7 +118,7 @@ export function SuppressedActivitiesCard() {
             </Button>
             <Button disabled={restoreMutation.isPending} onClick={restoreAll}>
               {restoreMutation.isPending ? (
-                <Icons.Spinner className="mr-2 h-4 w-4 animate-spin" />
+                <Icons.Spinner className="me-2 h-4 w-4 animate-spin" />
               ) : null}
               {t("activity:suppressed.restore_all")}
             </Button>
